@@ -5,41 +5,58 @@ A clean, modular Rust TUI application for controlling Govee smart home devices w
 
 ## Architecture
 
-### Workspace Structure (Multi-Crate)
+### Single Crate with Modules
 ```
 govee-tui/
-├── Cargo.toml (workspace)
-├── crates/
-│   ├── govee-core/      # Business logic, API wrapper, ~400 lines total
-│   │   ├── api.rs       # Govee API client (~80 lines)
+├── Cargo.toml
+├── src/
+│   ├── main.rs          # Entry point + CLI args (~90 lines)
+│   ├── api/
+│   │   ├── mod.rs       # Govee API client (~80 lines)
 │   │   ├── models.rs    # Device models (~80 lines)
-│   │   ├── commands.rs  # Device commands (~80 lines)
-│   │   └── lib.rs       # Module exports (~30 lines)
-│   ├── govee-db/        # SQLite persistence, ~300 lines total
+│   │   └── commands.rs  # Control commands (~90 lines)
+│   ├── db/
+│   │   ├── mod.rs       # SQLite connection (~70 lines)
 │   │   ├── schema.rs    # Database schema (~60 lines)
-│   │   ├── store.rs     # Device storage (~80 lines)
-│   │   ├── cache.rs     # API cache layer (~80 lines)
-│   │   └── lib.rs       # Module exports (~30 lines)
-│   ├── govee-ui/        # Ratatui TUI components, ~600 lines total
-│   │   ├── app.rs       # App state (~90 lines)
-│   │   ├── widgets/     # Custom widgets
-│   │   │   ├── device_list.rs (~80 lines)
-│   │   │   ├── device_detail.rs (~80 lines)
-│   │   │   ├── color_picker.rs (~90 lines)
-│   │   │   └── mod.rs (~20 lines)
-│   │   ├── theme.rs     # Colors & emojis (~80 lines)
-│   │   ├── events.rs    # Input handling (~80 lines)
-│   │   └── lib.rs       # Module exports (~30 lines)
-│   └── govee-cli/       # Main binary, ~200 lines total
-│       ├── main.rs      # Entry point (~80 lines)
-│       ├── args.rs      # Clap definitions (~60 lines)
-│       └── runner.rs    # Execution logic (~60 lines)
+│   │   └── cache.rs     # Device/state cache (~80 lines)
+│   ├── ui/
+│   │   ├── mod.rs       # App state & event loop (~90 lines)
+│   │   ├── theme.rs     # Colors & emojis (~60 lines)
+│   │   └── widgets/
+│   │       ├── mod.rs           # Widget exports (~20 lines)
+│   │       ├── device_list.rs   # Device list view (~80 lines)
+│   │       ├── detail_view.rs   # Device details (~90 lines)
+│   │       ├── color_picker.rs  # RGB color picker (~90 lines)
+│   │       └── brightness.rs    # Brightness slider (~60 lines)
+│   └── config.rs        # Configuration management (~80 lines)
 ```
+**Total: ~1,100 lines across 16 files**
+
+## Govee API Quick Reference
+
+The `govee-api` crate provides thin wrappers around Govee's REST API:
+
+```rust
+// List all devices
+client.get_devices().await?
+
+// Control device (generic method)
+client.control_device(device_id, Command {
+    name: "turn",        // or "brightness", "color", "colorTem"
+    value: Value::On     // Command-specific value
+}).await?
+```
+
+**Command Types:**
+- `turn`: `Value::On` / `Value::Off`
+- `brightness`: `Value::Int(0..=100)`
+- `color`: `Value::Color { r, g, b }` (each 0-255)
+- `colorTem`: `Value::Int(2000..=9000)` (Kelvin)
 
 ## Core Dependencies
 
 ### Runtime
-- `govee-api` (0.7+) - Govee device control
+- `govee-api` (latest) - Govee device control
 - `ratatui` (latest) - TUI framework (chosen over slint for terminal focus)
 - `crossterm` - Terminal manipulation
 - `clap` (4.x) - CLI argument parsing with derive
@@ -67,15 +84,28 @@ govee-tui/
 - Group management (rooms, zones)
 ```
 
-### 2. Device Control (govee-core)
+### 2. Device Control (API Commands)
 ```rust
-// Control commands
-- Power on/off
-- Brightness adjustment (0-100%)
-- Color setting (RGB, presets)
-- Color temperature (kelvin)
-- Scene activation
-- Command history
+// Govee API supports these control commands:
+
+// "turn" - Power control
+Turn::On | Turn::Off
+
+// "brightness" - Brightness control
+Brightness(0..=100)  // Percentage (0-100)
+
+// "color" - RGB color control
+Color { r: 0..=255, g: 0..=255, b: 0..=255 }
+
+// "colorTem" - Color temperature control
+ColorTemp(2000..=9000)  // Kelvin (warm to cool)
+
+// Fine-grained UI controls:
+- Arrow keys: ±5% brightness, ±100K temperature
+- Shift+Arrow: ±1% brightness, ±10K temperature
+- Mouse/trackpad: Precise RGB color picker
+- Number keys: Quick brightness (1=10%, 2=20%, etc.)
+- Color presets: Common colors + favorites
 ```
 
 ### 3. Data Persistence (govee-db)
@@ -129,51 +159,50 @@ cache (key, value, expires_at) -- API response cache
 ### Workflow: `ci.yml`
 ```yaml
 Strategy:
-- Matrix build: [ubuntu-latest, macos-latest, windows-latest]
-- Rust versions: [stable, beta]
+- Matrix: [ubuntu-latest, macos-latest] only (no Windows, single Rust stable)
 - Parallelism: All jobs run concurrently
-- Caching: Cargo registry, git deps, target/ (sccache for faster compilation)
+- Efficient caching to minimize build times
 
 Jobs:
-1. Format Check (rustfmt)
-2. Lint (clippy --deny warnings)
-3. Test (cargo nextest - 3x faster than cargo test)
-4. Security Audit (cargo-deny, cargo-audit)
-5. Build (release builds for all platforms)
-6. Coverage (cargo-tarpaulin → Codecov)
+1. Format Check (rustfmt) - ~30s
+2. Lint (clippy --deny warnings) - ~2min
+3. Test (cargo nextest) - ~1min
+4. Build (debug build for validation) - ~2min
 
 Optimizations:
-- Rust cache action (Swatinem/rust-cache@v2)
-- Sparse registry protocol (CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse)
-- No apt dependencies (everything via cargo/rustup)
-- Incremental compilation in CI
+- Swatinem/rust-cache@v2 - Smart incremental caching
+- Sparse registry (CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse)
+- Zero apt dependencies - pure Cargo/Rustup
+- cargo-binstall for tools (faster than compilation)
+
+Target: <5 minute total CI time
 ```
 
 ### Workflow: `release.yml`
 ```yaml
 Trigger: Git tags (v*.*.*)
 
+Targets (using cargo-zigbuild for easy cross-compilation):
+- x86_64-unknown-linux-musl (static, no glibc dependency)
+- x86_64-apple-darwin (Intel Macs)
+- aarch64-apple-darwin (M1/M2/M3 Macs)
+
 Steps:
-1. Cross-compile for multiple targets:
-   - x86_64-unknown-linux-gnu (static musl)
-   - x86_64-apple-darwin
-   - aarch64-apple-darwin (M1/M2 Macs)
-   - x86_64-pc-windows-gnu
-2. Generate checksums (SHA256)
-3. Create GitHub Release
-4. Upload binaries as artifacts
-5. Optional: Publish to crates.io
+1. Cross-compile release builds
+2. Strip binaries, compress with upx
+3. Generate SHA256 checksums
+4. Create GitHub Release with binaries
+5. Optional: cargo publish to crates.io
 ```
 
-### Workflow: `deps.yml` (Weekly)
+### Workflow: `audit.yml` (Weekly)
 ```yaml
-Trigger: Cron schedule
+Trigger: Cron (Sundays at 00:00 UTC)
 
 Purpose:
-- cargo update --dry-run
-- Check for outdated dependencies
-- Security advisories
-- Create automated PR if updates available
+- cargo-audit for security vulnerabilities
+- cargo-outdated for dependency updates
+- Create issue if action needed (not auto-PR to avoid noise)
 ```
 
 ## Development Guidelines
@@ -197,11 +226,12 @@ linker = "rust-lld"  # Fast linking
 - All public APIs documented
 
 ### Project Principles
-1. **DRY**: Extract common patterns into shared modules
-2. **Modularity**: Each crate has single responsibility
-3. **Testability**: Mock external APIs, test business logic
-4. **Performance**: Cache API responses, async operations
-5. **UX**: Responsive UI, clear feedback, graceful errors
+1. **DRY**: Extract common patterns, avoid duplication
+2. **Modularity**: Clear module boundaries, single responsibility
+3. **Pragmatic**: Don't over-engineer, modules > workspace crates
+4. **Testability**: Mock external APIs, test business logic
+5. **Performance**: Cache responses, efficient async operations
+6. **UX**: Responsive UI, clear feedback, graceful errors
 
 ## Configuration
 
@@ -230,50 +260,48 @@ refresh = "r"
 ## Implementation Phases
 
 ### Phase 1: Foundation (Days 1-2)
-- [ ] Workspace setup with all crates
-- [ ] CI/CD pipeline (fmt, clippy, test)
-- [ ] Basic CLI argument parsing
-- [ ] govee-core: API client wrapper
-- [ ] govee-db: SQLite schema + migrations
+- [ ] Cargo.toml with dependencies
+- [ ] CI/CD pipeline (fmt, clippy, test, build)
+- [ ] Module structure (api/, db/, ui/, config.rs)
+- [ ] Basic CLI argument parsing (clap)
+- [ ] API client wrapper with device listing
 
 ### Phase 2: Core Logic (Days 3-4)
-- [ ] Device listing & filtering
-- [ ] Device control commands
-- [ ] Caching layer
-- [ ] Error handling & logging
-- [ ] Unit tests for business logic
+- [ ] All 4 control commands (turn, brightness, color, colorTem)
+- [ ] SQLite schema + device/state caching
+- [ ] Error handling & logging (tracing)
+- [ ] Unit tests for control logic
 
 ### Phase 3: TUI (Days 5-7)
-- [ ] Basic ratatui app structure
-- [ ] Device list widget
-- [ ] Device detail view
-- [ ] Color picker widget
-- [ ] Theme & styling
-- [ ] Keybinding system
+- [ ] Basic ratatui app + event loop
+- [ ] Device list widget with status emojis
+- [ ] Device detail view with live updates
+- [ ] RGB color picker + temperature slider
+- [ ] Brightness control (arrow keys, number shortcuts)
+- [ ] Theme & emoji styling
 
 ### Phase 4: Polish (Days 8-9)
-- [ ] Command history
-- [ ] Search/filter UI
-- [ ] Configuration management
-- [ ] Integration tests
-- [ ] Documentation
-- [ ] Release builds
+- [ ] Fine-grained controls (Shift+arrows for precision)
+- [ ] Search/filter UI (Ctrl+F)
+- [ ] Configuration file support
+- [ ] Error handling & user feedback
+- [ ] README with screenshots/demo
 
-### Phase 5: Deployment (Day 10)
-- [ ] Release automation
-- [ ] Installation instructions
-- [ ] Demo GIF/screenshots
-- [ ] Crates.io publication
+### Phase 5: Release (Day 10)
+- [ ] Release workflow (cross-compilation)
+- [ ] Binary artifacts for Linux/macOS
+- [ ] Installation guide
+- [ ] Tag v0.1.0
 
 ## Success Metrics
-- ✅ Zero clippy warnings
-- ✅ 100% fmt compliance
-- ✅ <3s cold start time
-- ✅ <100ms UI response time
-- ✅ All files under 100 lines
-- ✅ CI runs in <5 minutes
-- ✅ Cross-platform builds successful
-- ✅ Zero unsafe code (unless absolutely necessary)
+- ✅ Zero clippy warnings (always)
+- ✅ 100% fmt compliance (always)
+- ✅ All files ~100 lines or less
+- ✅ CI completes in <5 minutes
+- ✅ Linux + macOS builds passing
+- ✅ Single binary, statically linked
+- ✅ <2s cold start time
+- ✅ <50ms UI response time
 
 ## Nice-to-Have Features (Future)
 - Multi-device batch control
