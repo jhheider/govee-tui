@@ -6,7 +6,9 @@ pub struct Theme {
     pub highlight: Style,
     pub text: Style,
     pub success: Style,
+    #[allow(dead_code)]
     pub warning: Style,
+    #[allow(dead_code)]
     pub error: Style,
     pub dim: Style,
 }
@@ -28,6 +30,7 @@ impl Theme {
 
 pub struct Emoji;
 
+#[allow(dead_code)]
 impl Emoji {
     pub const POWER_ON: &'static str = "✅";
     pub const POWER_OFF: &'static str = "⭕";

@@ -35,6 +35,7 @@ impl Database {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn cache(&self) -> Cache<'_> {
         Cache::new(&self.conn)
     }
@@ -48,6 +49,7 @@ impl Database {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn get_devices(&self) -> Result<Vec<(String, String, String)>> {
         let mut stmt = self.conn.prepare("SELECT id, name, model FROM devices ORDER BY name")?;
 
@@ -58,6 +60,7 @@ impl Database {
         Ok(devices)
     }
 
+    #[allow(dead_code)]
     pub fn save_state(&self, device_id: &str, state_json: &str) -> Result<()> {
         self.conn.execute(
             "INSERT OR REPLACE INTO device_state (device_id, state_json, updated_at)

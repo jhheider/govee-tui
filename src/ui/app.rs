@@ -8,6 +8,7 @@ use super::view_state::AppState;
 pub struct App {
     pub client: api::Client,
     pub db: db::Database,
+    #[allow(dead_code)]
     pub config: config::Config,
     pub theme: Theme,
     pub devices: Vec<api::Device>,
@@ -101,6 +102,7 @@ impl App {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn toggle_power(&mut self) -> Result<()> {
         let indices = self.state.get_selected_or_current();
         let new_state = !self.state.device_state.as_ref().map(|s| s.power).unwrap_or(false);

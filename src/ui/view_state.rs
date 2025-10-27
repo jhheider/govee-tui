@@ -75,6 +75,7 @@ impl AppState {
         }
     }
 
+    #[allow(dead_code)]
     pub fn is_selected(&self, index: usize) -> bool {
         self.selected_devices.contains(&index)
     }

@@ -56,10 +56,8 @@ fn default_cache_ttl() -> u64 {
 
 impl Config {
     pub fn load(path: Option<String>) -> Result<Self> {
-        let config_path = path
-            .map(PathBuf::from)
-            .or_else(|| Self::default_path())
-            .context("No config file found")?;
+        let config_path =
+            path.map(PathBuf::from).or_else(Self::default_path).context("No config file found")?;
 
         if config_path.exists() {
             let content =

@@ -45,7 +45,8 @@ impl RgbColor {
         Self { r, g, b }
     }
 
-    pub fn to_hex(&self) -> String {
+    #[allow(dead_code)]
+    pub fn to_hex(self) -> String {
         format!("#{:02X}{:02X}{:02X}", self.r, self.g, self.b)
     }
 }

@@ -2,10 +2,12 @@ use anyhow::Result;
 use chrono::{Duration, Utc};
 use rusqlite::{params, Connection};
 
+#[allow(dead_code)]
 pub struct Cache<'a> {
     conn: &'a Connection,
 }
 
+#[allow(dead_code)]
 impl<'a> Cache<'a> {
     pub fn new(conn: &'a Connection) -> Self {
         Self { conn }
