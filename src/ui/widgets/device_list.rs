@@ -6,20 +6,25 @@ use ratatui::{
 use crate::api::Device;
 use crate::ui::theme::{Emoji, Theme};
 
-pub fn render<'a>(devices: &'a [Device], selected_index: usize, theme: &'a Theme) -> List<'a> {
+pub fn render<'a>(
+    devices: &'a [Device],
+    selected_index: usize,
+    selected_devices: &'a [usize],
+    theme: &'a Theme,
+) -> List<'a> {
     let items: Vec<ListItem> = devices
         .iter()
         .enumerate()
         .map(|(i, device)| {
-            let status_emoji = if device.online {
-                Emoji::POWER_ON
-            } else {
-                Emoji::POWER_OFF
-            };
+            let status_emoji = if device.online { Emoji::POWER_ON } else { Emoji::POWER_OFF };
 
             let device_emoji = Emoji::LIGHT;
 
+            // Multi-select indicator
+            let select_indicator = if selected_devices.contains(&i) { "[✓] " } else { "[ ] " };
+
             let content = Line::from(vec![
+                Span::raw(select_indicator),
                 Span::raw(device_emoji),
                 Span::raw(" "),
                 Span::styled(&device.name, theme.text),

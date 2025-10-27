@@ -7,6 +7,11 @@ A clean, colorful terminal user interface (TUI) for controlling Govee smart home
 - 💡 **Device Management**: List, inspect, and control all your Govee devices
 - 🎨 **Colorful Interface**: Beautiful emoji-rich TUI with real-time updates
 - ⚡ **Full Control**: Power, brightness, RGB color, and temperature control
+- 🔍 **Device Search**: Quick filter with Ctrl+F
+- 🎯 **Multi-Device Control**: Select and control multiple devices at once
+- 🎨 **Interactive Color Picker**: RGB selector with real-time preview
+- 📊 **Device Details**: View comprehensive device state and info
+- 🎚️ **Fine-Grained Control**: Shift+arrows for precise adjustments
 - 🗄️ **Smart Caching**: SQLite-based device state caching
 - ⌨️ **Vim-style Navigation**: Intuitive keyboard shortcuts
 - 🚀 **Fast & Efficient**: Static binary with minimal dependencies
@@ -82,11 +87,41 @@ govee-tui
 ```
 
 **Keybindings:**
+
+#### Device List View
 - `↑/k` / `↓/j` - Navigate device list
-- `Enter` - Select device
-- `Space` - Toggle power
+- `Enter` - View device details
+- `Space` - Multi-select device (checkboxes)
+- `x` - Clear all selections
+- `Ctrl+F` - Search/filter devices
 - `r` - Refresh devices
 - `q` / `Ctrl+C` - Quit
+
+#### Device Detail View
+- `Esc` - Back to list
+- `Space` - Toggle power
+- `b` - Brightness control
+- `c` - RGB color picker
+- `t` - Color temperature (planned)
+
+#### Brightness Control
+- `↑↓` - Adjust ±5%
+- `Shift+↑↓` - Adjust ±1% (fine-grained)
+- `1-9` - Set to 10-90%
+- `Enter` - Apply changes
+- `Esc` - Cancel
+
+#### Color Picker
+- `Tab` / `Shift+Tab` - Switch R/G/B channel
+- `↑↓` - Adjust ±5
+- `Shift+↑↓` - Adjust ±1 (fine-grained)
+- `Enter` - Apply color
+- `Esc` - Cancel
+
+#### Search Mode
+- Type to filter devices by name/model
+- `Enter` - Return to list with filter applied
+- `Esc` - Cancel search
 
 ### CLI Mode
 
@@ -113,12 +148,21 @@ govee-tui control <device-id> temp 4000
 
 ## Supported Commands
 
-| Command | Description | Range |
-|---------|-------------|-------|
-| `turn` | Power on/off | `on`, `off` |
-| `brightness` | Set brightness | 0-100% |
-| `color` | Set RGB color | 0-255 per channel |
-| `temp` | Set color temperature | 2000-9000K |
+| Command | Description | Range | Multi-Device |
+|---------|-------------|-------|--------------|
+| `turn` | Power on/off | `on`, `off` | ✓ |
+| `brightness` | Set brightness | 0-100% | ✓ |
+| `color` | Set RGB color | 0-255 per channel | ✓ |
+| `temp` | Set color temperature | 2000-9000K | Planned |
+
+### Multi-Device Operations
+
+You can select multiple devices with `Space` and apply commands to all selected devices:
+1. Navigate to a device and press `Space` to select (✓ appears in checkbox)
+2. Repeat for additional devices
+3. Press `Enter` to view details of current device
+4. Make changes (brightness, color, power) - applies to ALL selected devices
+5. Press `x` to clear all selections
 
 ## Development
 

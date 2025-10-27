@@ -106,10 +106,7 @@ impl Default for Config {
                 emoji: default_emoji(),
                 refresh_interval_ms: default_refresh(),
             },
-            database: DatabaseConfig {
-                path: db_path,
-                cache_ttl_seconds: default_cache_ttl(),
-            },
+            database: DatabaseConfig { path: db_path, cache_ttl_seconds: default_cache_ttl() },
         }
     }
 }

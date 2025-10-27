@@ -21,11 +21,7 @@ impl Client {
 
     pub async fn get_devices(&self) -> Result<Vec<Device>> {
         debug!("Fetching device list");
-        let response = self
-            .inner
-            .get_devices()
-            .await
-            .context("Failed to fetch devices")?;
+        let response = self.inner.get_devices().await.context("Failed to fetch devices")?;
 
         let devices: Vec<Device> = response
             .data
@@ -53,10 +49,7 @@ impl Client {
             cmd: command.to_govee_command(),
         };
 
-        self.inner
-            .control_device(payload)
-            .await
-            .context("Failed to control device")?;
+        self.inner.control_device(payload).await.context("Failed to control device")?;
 
         info!("Device {} controlled successfully", device_id);
         Ok(())

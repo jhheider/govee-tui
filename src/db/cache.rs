@@ -39,16 +39,14 @@ impl<'a> Cache<'a> {
     }
 
     pub fn delete(&self, key: &str) -> Result<()> {
-        self.conn
-            .execute("DELETE FROM cache WHERE key = ?1", params![key])?;
+        self.conn.execute("DELETE FROM cache WHERE key = ?1", params![key])?;
         Ok(())
     }
 
     pub fn cleanup_expired(&self) -> Result<usize> {
         let now = Utc::now().to_rfc3339();
-        let deleted = self
-            .conn
-            .execute("DELETE FROM cache WHERE expires_at <= ?1", params![now])?;
+        let deleted =
+            self.conn.execute("DELETE FROM cache WHERE expires_at <= ?1", params![now])?;
         Ok(deleted)
     }
 }

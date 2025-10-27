@@ -124,10 +124,7 @@ fn init_logging(verbose: bool) -> Result<()> {
         EnvFilter::new("govee_tui=info")
     };
 
-    tracing_subscriber::registry()
-        .with(filter)
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    tracing_subscriber::registry().with(filter).with(tracing_subscriber::fmt::layer()).init();
 
     Ok(())
 }

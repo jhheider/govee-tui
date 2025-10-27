@@ -14,9 +14,7 @@ pub struct Theme {
 impl Theme {
     pub fn dark() -> Self {
         Self {
-            title: Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD),
+            title: Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
             border: Style::default().fg(Color::DarkGray),
             highlight: Style::default().fg(Color::Black).bg(Color::Cyan),
             text: Style::default().fg(Color::White),
