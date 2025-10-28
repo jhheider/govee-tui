@@ -26,15 +26,21 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Launch interactive TUI
+    /// Launch interactive TUI (default)
     Tui,
 
-    /// List all devices
-    List,
+    /// List all devices with details
+    Devices,
+
+    /// Get device state and capabilities
+    Status {
+        /// Device name (fuzzy match) or exact ID
+        device: String,
+    },
 
     /// Control a device
     Control {
-        /// Device name or ID
+        /// Device name (fuzzy match) or exact ID
         device: String,
 
         /// Command to execute
@@ -111,39 +117,207 @@ async fn main() -> Result<()> {
         None | Some(Commands::Tui) => {
             ui::run(client, db, config).await?;
         }
-        Some(Commands::List) => {
-            let devices = client.get_devices().await?;
-            for device in devices {
-                println!("{}: {} ({})", device.id, device.name, device.model);
-            }
+        Some(Commands::Devices) => {
+            cmd_list_devices(&client).await?;
+        }
+        Some(Commands::Status { device }) => {
+            cmd_device_status(&client, &device).await?;
         }
         Some(Commands::Control { device, command }) => {
-            execute_control(&client, &device, command).await?;
+            cmd_control_device(&client, &device, command).await?;
         }
     }
 
     Ok(())
 }
 
-async fn execute_control(
+// ==================== CLI COMMANDS ====================
+
+async fn cmd_list_devices(client: &api::Client) -> Result<()> {
+    println!("📡 Fetching devices from Govee API...\n");
+
+    let devices = client.get_devices().await?;
+
+    if devices.is_empty() {
+        println!("⚠️  No devices found");
+        return Ok(());
+    }
+
+    println!("Found {} device(s):\n", devices.len());
+    println!(
+        "{:<4} {:<30} {:<20} {:<12} ID",
+        "#", "Name", "Model", "Controllable"
+    );
+    println!("{}", "=".repeat(100));
+
+    for (i, device) in devices.iter().enumerate() {
+        let controllable = if device.controllable {
+            "✓ Yes"
+        } else {
+            "⚪ No"
+        };
+        println!(
+            "{:<4} {:<30} {:<20} {:<12} {}",
+            i + 1,
+            truncate(&device.name, 30),
+            truncate(&device.model, 20),
+            controllable,
+            device.id
+        );
+    }
+
+    println!("\n💡 Tip: Use `--verbose` flag to see debug info about API calls");
+    Ok(())
+}
+
+async fn cmd_device_status(client: &api::Client, device_query: &str) -> Result<()> {
+    println!("🔍 Searching for device: {}\n", device_query);
+
+    let devices = client.get_devices().await?;
+    let device = find_device(&devices, device_query)?;
+
+    println!("📱 Device: {}", device.name);
+    println!("   ID: {}", device.id);
+    println!("   Model: {}", device.model);
+    println!(
+        "   Controllable: {}",
+        if device.controllable {
+            "✓ Yes"
+        } else {
+            "⚪ No"
+        }
+    );
+    println!(
+        "   Retrievable: {}",
+        if device.retrievable {
+            "✓ Yes"
+        } else {
+            "⚪ No"
+        }
+    );
+
+    if !device.retrievable {
+        println!("\n⚠️  Device does not support state retrieval");
+        return Ok(());
+    }
+
+    println!("\n📊 Fetching current state...");
+
+    match client.get_device_state(&device.id, &device.model).await {
+        Ok(state) => {
+            println!(
+                "\n   Power: {}",
+                if state.power { "✅ ON" } else { "⭕ OFF" }
+            );
+
+            if let Some(brightness) = state.brightness {
+                println!("   Brightness: {}%", brightness);
+            }
+
+            if let Some(color) = state.color {
+                println!(
+                    "   Color: RGB({}, {}, {}) #{:02X}{:02X}{:02X}",
+                    color.r, color.g, color.b, color.r, color.g, color.b
+                );
+            }
+
+            if let Some(temp) = state.color_temp {
+                println!("   Color Temp: {}K", temp);
+            }
+        }
+        Err(e) => {
+            println!("\n❌ Failed to get device state: {}", e);
+        }
+    }
+
+    Ok(())
+}
+
+async fn cmd_control_device(
     client: &api::Client,
-    device_id: &str,
+    device_query: &str,
     command: ControlCommand,
 ) -> Result<()> {
     use api::Command;
 
+    println!("🔍 Searching for device: {}\n", device_query);
+
+    let devices = client.get_devices().await?;
+    let device = find_device(&devices, device_query)?;
+
+    if !device.controllable {
+        anyhow::bail!("❌ Device '{}' is not controllable", device.name);
+    }
+
     let cmd = match command {
-        ControlCommand::Turn { state } => Command::turn(state.to_lowercase() == "on"),
-        ControlCommand::Brightness { value } => Command::brightness(value),
-        ControlCommand::Color { r, g, b } => Command::color(r, g, b),
-        ControlCommand::Temp { kelvin } => Command::temperature(kelvin),
+        ControlCommand::Turn { state } => {
+            let on = state.to_lowercase() == "on";
+            println!(
+                "💡 Turning {} {}...",
+                device.name,
+                if on { "ON" } else { "OFF" }
+            );
+            Command::turn(on)
+        }
+        ControlCommand::Brightness { value } => {
+            println!("🔆 Setting brightness to {}%...", value);
+            Command::brightness(value)
+        }
+        ControlCommand::Color { r, g, b } => {
+            println!(
+                "🌈 Setting color to RGB({}, {}, {}) #{:02X}{:02X}{:02X}...",
+                r, g, b, r, g, b
+            );
+            Command::color(r, g, b)
+        }
+        ControlCommand::Temp { kelvin } => {
+            println!("🌡️  Setting color temperature to {}K...", kelvin);
+            Command::temperature(kelvin)
+        }
     };
 
-    // Note: For CLI, we need the model. For now, use empty string
-    // In a real scenario, we'd look up the device first
-    client.control_device(device_id, "", cmd).await?;
-    info!("Command executed successfully");
+    client
+        .control_device(&device.id, &device.model, cmd)
+        .await?;
+
+    println!("✅ Command executed successfully!");
     Ok(())
+}
+
+// ==================== HELPERS ====================
+
+fn find_device<'a>(devices: &'a [api::Device], query: &str) -> Result<&'a api::Device> {
+    // Try exact ID match first
+    if let Some(device) = devices.iter().find(|d| d.id == query) {
+        return Ok(device);
+    }
+
+    // Try fuzzy name match
+    let query_lower = query.to_lowercase();
+    let matches: Vec<&api::Device> = devices
+        .iter()
+        .filter(|d| d.name.to_lowercase().contains(&query_lower))
+        .collect();
+
+    match matches.len() {
+        0 => anyhow::bail!("❌ No device found matching '{}'", query),
+        1 => Ok(matches[0]),
+        _ => {
+            println!("⚠️  Multiple devices match '{}':", query);
+            for device in matches {
+                println!("   - {} ({})", device.name, device.id);
+            }
+            anyhow::bail!("Please be more specific or use the exact device ID");
+        }
+    }
+}
+
+fn truncate(s: &str, max_len: usize) -> String {
+    if s.len() <= max_len {
+        s.to_string()
+    } else {
+        format!("{}...", &s[..max_len - 3])
+    }
 }
 
 fn init_logging(verbose: bool) -> Result<()> {

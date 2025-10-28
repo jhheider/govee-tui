@@ -33,13 +33,12 @@ impl Client {
         debug!("Raw API response: {:?}", response);
 
         let device_data = response.data.context("No device data in response")?;
-        debug!("Device data structure: devices count = {}", device_data.devices.len());
+        debug!(
+            "Device data structure: devices count = {}",
+            device_data.devices.len()
+        );
 
-        let devices: Vec<Device> = device_data
-            .devices
-            .into_iter()
-            .map(Device::from)
-            .collect();
+        let devices: Vec<Device> = device_data.devices.into_iter().map(Device::from).collect();
 
         info!("Successfully fetched {} devices from API", devices.len());
         for (i, device) in devices.iter().enumerate() {
