@@ -71,9 +71,11 @@ pub struct Capability {
     pub parameters: serde_json::Value,
 }
 
-/// Raw device state response from API
+/// Raw device state response from API (wrapped in payload)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceStateResponse {
+pub struct DeviceStatePayload {
+    pub sku: String,
+    pub device: String,
     pub capabilities: Vec<CapabilityState>,
 }
 
@@ -86,11 +88,13 @@ pub struct CapabilityState {
     pub state: StateValue,
 }
 
-/// State value can be an int, object, or other JSON value
+/// State value can be bool, int, string, or object
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum StateValue {
-    Int { value: i32 },
+    Bool { value: bool },
+    Int { value: i64 },
+    String { value: String },
     Object { value: serde_json::Value },
 }
 
@@ -127,19 +131,21 @@ impl DeviceState {
                 }
                 "brightness" => {
                     if let StateValue::Int { value } = cap.state {
-                        brightness = Some(value);
+                        brightness = Some(value as i32);
                     }
                 }
                 "colorRgb" => {
-                    if let StateValue::Object { value } = cap.state {
-                        if let Ok(rgb) = serde_json::from_value::<Color>(value) {
-                            color = Some(rgb);
-                        }
+                    // colorRgb is a single integer packed as: (r << 16) | (g << 8) | b
+                    if let StateValue::Int { value } = cap.state {
+                        let r = ((value >> 16) & 0xFF) as u8;
+                        let g = ((value >> 8) & 0xFF) as u8;
+                        let b = (value & 0xFF) as u8;
+                        color = Some(Color { r, g, b });
                     }
                 }
                 "colorTemperatureK" | "colorTem" => {
                     if let StateValue::Int { value } = cap.state {
-                        color_temperature_kelvin = Some(value);
+                        color_temperature_kelvin = Some(value as i32);
                     }
                 }
                 _ => {}
@@ -193,6 +199,16 @@ pub(crate) struct ApiResponse<T> {
     #[serde(default)]
     pub message: String,
     pub data: T,
+}
+
+// Device state uses "payload" instead of "data"
+#[derive(Debug, Deserialize)]
+pub(crate) struct DeviceStateResponse {
+    #[serde(default)]
+    pub code: i32,
+    #[serde(default)]
+    pub msg: String,
+    pub payload: DeviceStatePayload,
 }
 
 #[derive(Debug, Serialize)]

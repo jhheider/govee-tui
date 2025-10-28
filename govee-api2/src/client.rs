@@ -84,16 +84,16 @@ impl GoveeClient {
             )));
         }
 
-        let api_response: ApiResponse<DeviceStateResponse> = response.json().await?;
+        let api_response: DeviceStateResponse = response.json().await?;
 
         if api_response.code != 0 && api_response.code != 200 {
             return Err(Error::Api {
                 code: api_response.code,
-                message: api_response.message,
+                message: api_response.msg,
             });
         }
 
-        Ok(DeviceState::from_capabilities(api_response.data.capabilities))
+        Ok(DeviceState::from_capabilities(api_response.payload.capabilities))
     }
 
     /// Turn a device on
