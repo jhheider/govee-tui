@@ -23,22 +23,29 @@ impl Client {
     }
 
     pub async fn get_devices(&self) -> Result<Vec<Device>> {
-        debug!("Fetching device list");
+        debug!("Fetching device list from Govee API");
         let response = self
             .inner
             .get_devices()
             .await
             .context("Failed to fetch devices")?;
 
-        let devices: Vec<Device> = response
-            .data
-            .context("No device data in response")?
+        debug!("Raw API response: {:?}", response);
+
+        let device_data = response.data.context("No device data in response")?;
+        debug!("Device data structure: devices count = {}", device_data.devices.len());
+
+        let devices: Vec<Device> = device_data
             .devices
             .into_iter()
             .map(Device::from)
             .collect();
 
-        info!("Fetched {} devices", devices.len());
+        info!("Successfully fetched {} devices from API", devices.len());
+        for (i, device) in devices.iter().enumerate() {
+            debug!("  Device {}: {} ({})", i + 1, device.name, device.model);
+        }
+
         Ok(devices)
     }
 
