@@ -11,14 +11,24 @@ pub struct Device {
     pub is_group: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub device_type: Option<String>,
+
+    // Capability flags
+    pub supports_power: bool,
+    pub supports_brightness: bool,
+    pub supports_color: bool,
+    pub supports_color_temp: bool,
 }
 
 impl From<govee_api2::Device> for Device {
     fn from(device: govee_api2::Device) -> Self {
         let is_group = device.is_group();
-        let controllable = device.supports_power();
-        let retrievable = device.supports_brightness() || device.supports_color();
-        
+        let supports_power = device.supports_power();
+        let supports_brightness = device.supports_brightness();
+        let supports_color = device.supports_color();
+        let supports_color_temp = device.supports_color_temp();
+        let controllable = supports_power;
+        let retrievable = supports_brightness || supports_color;
+
         Self {
             id: device.device,
             name: device.device_name,
@@ -28,6 +38,10 @@ impl From<govee_api2::Device> for Device {
             online: true,
             is_group,
             device_type: device.device_type,
+            supports_power,
+            supports_brightness,
+            supports_color,
+            supports_color_temp,
         }
     }
 }
