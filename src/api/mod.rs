@@ -1,11 +1,9 @@
 use anyhow::{Context, Result};
-use govee_api::{structs::govee::PayloadBody, GoveeClient};
-use std::sync::Arc;
+use govee_api2::GoveeClient;
 use tracing::{debug, info};
 
 pub mod commands;
 pub mod models;
-pub mod new_client;
 
 pub use commands::Command;
 pub use models::Device;
@@ -13,61 +11,35 @@ pub use models::DeviceState;
 
 #[derive(Clone)]
 pub struct Client {
-    inner: Arc<GoveeClient>,
-    new_client: new_client::NewApiClient,
+    inner: GoveeClient,
 }
 
 impl Client {
     pub fn new(api_key: &str) -> Result<Self> {
-        let inner = Arc::new(GoveeClient::new(api_key));
-        let new_client = new_client::NewApiClient::new(api_key.to_string());
-        info!("Govee API client initialized (using new router API for device list)");
-        Ok(Self { inner, new_client })
+        let inner = GoveeClient::new(api_key);
+        info!("Govee API client initialized (govee-api2)");
+        Ok(Self { inner })
     }
 
     pub async fn get_devices(&self) -> Result<Vec<Device>> {
-        debug!("Fetching device list from NEW Govee API (/router/api/v1/user/devices)");
+        debug!("Fetching device list from Govee API v2");
 
-        let response = self
-            .new_client
+        let devices = self
+            .inner
             .get_devices()
             .await
-            .context("Failed to fetch devices from new API")?;
+            .context("Failed to fetch devices")?;
 
-        debug!("Raw API response code: {}, message: {}", response.code, response.message);
-        debug!("Received {} devices from new API", response.data.len());
+        info!("Successfully fetched {} devices from API", devices.len());
 
-        let devices: Vec<Device> = response
-            .data
-            .into_iter()
-            .map(|new_dev| {
-                let is_group = new_dev.sku == "SameModeGroup";
-                Device {
-                    id: new_dev.device,
-                    name: new_dev.device_name,
-                    model: new_dev.sku.clone(),
-                    controllable: new_dev.capabilities.iter().any(|c| {
-                        c.capability_type == "devices.capabilities.on_off"
-                    }),
-                    retrievable: new_dev.capabilities.iter().any(|c| {
-                        c.capability_type == "devices.capabilities.range"
-                            || c.capability_type == "devices.capabilities.color_setting"
-                    }),
-                    online: true, // New API doesn't provide online status in device list
-                    is_group,
-                    device_type: new_dev.device_type,
-                }
-            })
-            .collect();
+        let converted: Vec<Device> = devices.into_iter().map(Device::from).collect();
 
-        info!("Successfully parsed {} devices from new API", devices.len());
-        for (i, device) in devices.iter().enumerate() {
+        for (i, device) in converted.iter().enumerate() {
             let type_str = if device.is_group { "GROUP" } else { "DEVICE" };
-            debug!("  {} {}: {} ({}) - controllable: {}",
-                type_str, i + 1, device.name, device.model, device.controllable);
+            debug!("  {} {}: {} ({})", type_str, i + 1, device.name, device.model);
         }
 
-        Ok(devices)
+        Ok(converted)
     }
 
     pub async fn control_device(
@@ -78,16 +50,24 @@ impl Client {
     ) -> Result<()> {
         debug!("Sending command {:?} to device {}", command, device_id);
 
-        let payload = PayloadBody {
-            device: device_id.to_string(),
-            model: model.to_string(),
-            cmd: command.to_govee_command(),
-        };
-
-        self.inner
-            .control_device(payload)
-            .await
-            .context("Failed to control device")?;
+        match command {
+            Command::TurnOn => {
+                self.inner.turn_on(device_id, model).await?;
+            }
+            Command::TurnOff => {
+                self.inner.turn_off(device_id, model).await?;
+            }
+            Command::Brightness(value) => {
+                self.inner.set_brightness(device_id, model, value).await?;
+            }
+            Command::Color(r, g, b) => {
+                let color = govee_api2::Color::new(r, g, b);
+                self.inner.set_color(device_id, model, color).await?;
+            }
+            Command::ColorTemp(kelvin) => {
+                self.inner.set_color_temperature(device_id, model, kelvin as i32).await?;
+            }
+        }
 
         info!("Device {} controlled successfully", device_id);
         Ok(())
@@ -100,14 +80,19 @@ impl Client {
     ) -> Result<models::DeviceState> {
         debug!("Fetching state for device {}", device_id);
 
-        let response = self
+        let state = self
             .inner
             .get_device_state(device_id, model)
             .await
             .context("Failed to get device state")?;
 
-        let data = response.data.context("No state data in response")?;
-        let state = models::DeviceState::from(data);
-        Ok(state)
+        // Convert govee_api2::DeviceState to our DeviceState
+        Ok(models::DeviceState {
+            online: state.online,
+            power: state.power_state.map(|p| p.is_on()).unwrap_or(false),
+            brightness: state.brightness.map(|b| b as u8),
+            color: state.color.map(|c| models::RgbColor::new(c.r, c.g, c.b)),
+            color_temp: state.color_temperature_kelvin.map(|k| k as u16),
+        })
     }
 }

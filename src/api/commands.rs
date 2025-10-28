@@ -1,16 +1,19 @@
-use serde_json::json;
-
 #[derive(Debug, Clone)]
 pub enum Command {
-    Turn(bool),
+    TurnOn,
+    TurnOff,
     Brightness(u8),
-    Color { r: u8, g: u8, b: u8 },
-    Temperature(u16),
+    Color(u8, u8, u8),
+    ColorTemp(u16),
 }
 
 impl Command {
     pub fn turn(on: bool) -> Self {
-        Self::Turn(on)
+        if on {
+            Self::TurnOn
+        } else {
+            Self::TurnOff
+        }
     }
 
     pub fn brightness(value: u8) -> Self {
@@ -19,37 +22,12 @@ impl Command {
     }
 
     pub fn color(r: u8, g: u8, b: u8) -> Self {
-        Self::Color { r, g, b }
+        Self::Color(r, g, b)
     }
 
     pub fn temperature(kelvin: u16) -> Self {
         let clamped = kelvin.clamp(2000, 9000);
-        Self::Temperature(clamped)
-    }
-
-    /// Convert command to Govee API GoveeCommand
-    pub fn to_govee_command(&self) -> govee_api::structs::govee::GoveeCommand {
-        match self {
-            Self::Turn(on) => {
-                let value = if *on { "on" } else { "off" };
-                govee_api::structs::govee::GoveeCommand {
-                    name: "turn".to_string(),
-                    value: value.to_string(),
-                }
-            }
-            Self::Brightness(val) => govee_api::structs::govee::GoveeCommand {
-                name: "brightness".to_string(),
-                value: val.to_string(),
-            },
-            Self::Color { r, g, b } => govee_api::structs::govee::GoveeCommand {
-                name: "color".to_string(),
-                value: json!({"r": r, "g": g, "b": b}).to_string(),
-            },
-            Self::Temperature(kelvin) => govee_api::structs::govee::GoveeCommand {
-                name: "colorTem".to_string(),
-                value: kelvin.to_string(),
-            },
-        }
+        Self::ColorTemp(clamped)
     }
 }
 
@@ -72,12 +50,12 @@ mod tests {
         let cmd2 = Command::temperature(10000);
 
         match cmd1 {
-            Command::Temperature(val) => assert_eq!(val, 2000),
+            Command::ColorTemp(val) => assert_eq!(val, 2000),
             _ => panic!("Wrong command type"),
         }
 
         match cmd2 {
-            Command::Temperature(val) => assert_eq!(val, 9000),
+            Command::ColorTemp(val) => assert_eq!(val, 9000),
             _ => panic!("Wrong command type"),
         }
     }

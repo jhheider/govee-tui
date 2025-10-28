@@ -1,4 +1,3 @@
-use govee_api::structs::govee::{GoveeDataDeviceStatus, GoveeDevice, GoveeDeviceProperty};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -11,20 +10,24 @@ pub struct Device {
     pub online: bool,
     pub is_group: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub device_type: Option<String>, // Device type from API (e.g., "devices.types.light")
+    pub device_type: Option<String>,
 }
 
-impl From<GoveeDevice> for Device {
-    fn from(device: GoveeDevice) -> Self {
+impl From<govee_api2::Device> for Device {
+    fn from(device: govee_api2::Device) -> Self {
+        let is_group = device.is_group();
+        let controllable = device.supports_power();
+        let retrievable = device.supports_brightness() || device.supports_color();
+        
         Self {
             id: device.device,
-            name: device.deviceName,
-            model: device.model,
-            controllable: device.controllable,
-            retrievable: device.retrievable,
-            online: true, // Default to online
-            is_group: false, // Old API doesn't have groups
-            device_type: None,
+            name: device.device_name,
+            model: device.sku,
+            controllable,
+            retrievable,
+            online: true,
+            is_group,
+            device_type: device.device_type,
         }
     }
 }
@@ -50,37 +53,7 @@ impl RgbColor {
         Self { r, g, b }
     }
 
-    #[allow(dead_code)]
     pub fn to_hex(self) -> String {
         format!("#{:02X}{:02X}{:02X}", self.r, self.g, self.b)
-    }
-}
-
-impl From<GoveeDataDeviceStatus> for DeviceState {
-    fn from(data: GoveeDataDeviceStatus) -> Self {
-        let mut state = DeviceState {
-            online: false,
-            power: false,
-            brightness: None,
-            color: None,
-            color_temp: None,
-        };
-
-        for prop in data.properties {
-            match prop {
-                GoveeDeviceProperty::Online(v) => state.online = v,
-                GoveeDeviceProperty::PowerState(v) => state.power = v == "on",
-                GoveeDeviceProperty::Brightness(v) => state.brightness = Some(v as u8),
-                GoveeDeviceProperty::Color(_c) => {
-                    // Note: Color fields in govee_api are private
-                    state.color = Some(RgbColor::new(255, 255, 255));
-                }
-                GoveeDeviceProperty::ColorTem(v) | GoveeDeviceProperty::ColorTemInKelvin(v) => {
-                    state.color_temp = Some(v as u16);
-                }
-            }
-        }
-
-        state
     }
 }
