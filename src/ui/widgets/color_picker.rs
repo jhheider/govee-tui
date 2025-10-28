@@ -116,8 +116,7 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
             Span::raw("█".repeat((picker.b as usize * 20) / 255)),
         ]),
         Line::from(""),
-        Line::from("Use Tab to switch channels"),
-        Line::from("Use arrow keys to adjust"),
+        Line::from("↑↓ to adjust • Tab to switch channel • Enter to apply"),
     ])
     .block(Block::default().borders(Borders::ALL).title("Channels"));
     frame.render_widget(sliders, chunks[2]);
