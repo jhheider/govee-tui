@@ -66,19 +66,34 @@ async fn main() -> Result<()> {
     init_logging(cli.verbose)?;
 
     // Load configuration
-    let config = config::Config::load(cli.config)?;
+    let config = config::Config::load(cli.config.clone())?;
+    let config_path = cli
+        .config
+        .map(std::path::PathBuf::from)
+        .or_else(|| dirs::config_dir().map(|d| d.join("govee-tui").join("config.toml")))
+        .unwrap();
 
     // Validate API key
     if config.api.key.is_empty() || config.api.key == "YOUR_API_KEY_HERE" {
         eprintln!("❌ Error: No Govee API key configured!");
         eprintln!();
-        eprintln!("Please set your API key in: ~/.config/govee-tui/config.toml");
+        eprintln!("A default config file has been created at:");
+        eprintln!("  {}", config_path.display());
         eprintln!();
-        eprintln!("To get an API key:");
+        eprintln!("Please edit it and replace YOUR_API_KEY_HERE with your actual API key:");
+        eprintln!();
+        eprintln!("  [api]");
+        eprintln!("  key = \"your-actual-api-key-here\"");
+        eprintln!("  timeout_ms = 5000");
+        eprintln!("  retry_attempts = 3");
+        eprintln!();
+        eprintln!("To get a Govee API key:");
         eprintln!("  1. Download the Govee Home app");
         eprintln!("  2. Go to Settings → About Us → Apply for API Key");
         eprintln!("  3. Follow the email instructions");
-        eprintln!("  4. Add the key to your config file");
+        eprintln!("  4. Run govee-tui again after updating the config");
+        eprintln!();
+        eprintln!("Documentation: https://developer.govee.com");
         eprintln!();
         std::process::exit(1);
     }
