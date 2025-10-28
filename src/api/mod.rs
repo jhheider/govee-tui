@@ -5,6 +5,7 @@ use tracing::{debug, info};
 
 pub mod commands;
 pub mod models;
+pub mod new_client;
 
 pub use commands::Command;
 pub use models::Device;
@@ -13,36 +14,51 @@ pub use models::DeviceState;
 #[derive(Clone)]
 pub struct Client {
     inner: Arc<GoveeClient>,
+    new_client: new_client::NewApiClient,
 }
 
 impl Client {
     pub fn new(api_key: &str) -> Result<Self> {
         let inner = Arc::new(GoveeClient::new(api_key));
-        info!("Govee API client initialized");
-        Ok(Self { inner })
+        let new_client = new_client::NewApiClient::new(api_key.to_string());
+        info!("Govee API client initialized (using new router API for device list)");
+        Ok(Self { inner, new_client })
     }
 
     pub async fn get_devices(&self) -> Result<Vec<Device>> {
-        debug!("Fetching device list from Govee API");
+        debug!("Fetching device list from NEW Govee API (/router/api/v1/user/devices)");
+
         let response = self
-            .inner
+            .new_client
             .get_devices()
             .await
-            .context("Failed to fetch devices")?;
+            .context("Failed to fetch devices from new API")?;
 
-        debug!("Raw API response: {:?}", response);
+        debug!("Raw API response code: {}, message: {}", response.code, response.message);
+        debug!("Received {} devices from new API", response.data.len());
 
-        let device_data = response.data.context("No device data in response")?;
-        debug!(
-            "Device data structure: devices count = {}",
-            device_data.devices.len()
-        );
+        let devices: Vec<Device> = response
+            .data
+            .into_iter()
+            .map(|new_dev| Device {
+                id: new_dev.device,
+                name: new_dev.device_name,
+                model: new_dev.sku,
+                controllable: new_dev.capabilities.iter().any(|c| {
+                    c.capability_type == "devices.capabilities.on_off"
+                }),
+                retrievable: new_dev.capabilities.iter().any(|c| {
+                    c.capability_type == "devices.capabilities.range"
+                        || c.capability_type == "devices.capabilities.color_setting"
+                }),
+                online: true, // New API doesn't provide online status in device list
+            })
+            .collect();
 
-        let devices: Vec<Device> = device_data.devices.into_iter().map(Device::from).collect();
-
-        info!("Successfully fetched {} devices from API", devices.len());
+        info!("Successfully parsed {} devices from new API", devices.len());
         for (i, device) in devices.iter().enumerate() {
-            debug!("  Device {}: {} ({})", i + 1, device.name, device.model);
+            debug!("  Device {}: {} ({}) - controllable: {}",
+                i + 1, device.name, device.model, device.controllable);
         }
 
         Ok(devices)
