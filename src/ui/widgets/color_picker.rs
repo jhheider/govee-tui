@@ -1,19 +1,19 @@
+use color_name::css::Color as ColorName;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
+    style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, List, ListItem},
+    widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
-    style::{Style, Modifier},
 };
-use color_name::css::Color as ColorName;
 
-use crate::ui::theme::{Emoji, Theme};
 use super::color_groups::{get_color_groups, to_spaced_name};
+use crate::ui::theme::{Emoji, Theme};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ColorPickerMode {
-    Rgb,      // Edit RGB values
-    Browser,  // Browse named colors
+    Rgb,     // Edit RGB values
+    Browser, // Browse named colors
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -23,8 +23,8 @@ pub struct ColorPicker {
     pub b: u8,
     pub mode: ColorPickerMode,
     pub selected_channel: usize, // 0=R, 1=G, 2=B (RGB mode)
-    pub selected_group: usize,    // Which color group (Browser mode)
-    pub selected_color: usize,    // Which color in group (Browser mode)
+    pub selected_group: usize,   // Which color group (Browser mode)
+    pub selected_color: usize,   // Which color in group (Browser mode)
 }
 
 impl ColorPicker {
@@ -116,20 +116,54 @@ impl ColorPicker {
     }
 }
 
+/// Create proportional RGB visualization boxes
+fn rgb_boxes(r: u8, g: u8, b: u8) -> String {
+    let box_width = 5;
+    let r_filled = (r as usize * box_width) / 255;
+    let g_filled = (g as usize * box_width) / 255;
+    let b_filled = (b as usize * box_width) / 255;
+
+    format!(
+        "🔴[{}{}] 🟢[{}{}] 🔵[{}{}]",
+        "█".repeat(r_filled),
+        "░".repeat(box_width - r_filled),
+        "█".repeat(g_filled),
+        "░".repeat(box_width - g_filled),
+        "█".repeat(b_filled),
+        "░".repeat(box_width - b_filled)
+    )
+}
+
 pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
     let area = frame.area();
 
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3),   // Title
-            Constraint::Length(10),  // Preview
-            Constraint::Min(10),     // RGB sliders OR color browser
-            Constraint::Length(4),   // Help
-        ])
-        .split(area);
+    // Different layout based on mode
+    let chunks = if picker.mode == ColorPickerMode::Browser {
+        // Browser mode: Title | Column selector | Preview | Color list | Help
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3), // Title
+                Constraint::Length(3), // Column selector
+                Constraint::Length(6), // Preview (smaller)
+                Constraint::Min(10),   // Color list
+                Constraint::Length(3), // Help
+            ])
+            .split(area)
+    } else {
+        // RGB mode: Title | Preview | Sliders | Help
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3), // Title
+                Constraint::Length(6), // Preview
+                Constraint::Min(10),   // RGB sliders
+                Constraint::Length(3), // Help
+            ])
+            .split(area)
+    };
 
-    // Title shows current mode
+    // Title
     let mode_str = match picker.mode {
         ColorPickerMode::Rgb => "RGB Editor",
         ColorPickerMode::Browser => "Color Browser",
@@ -139,38 +173,77 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
         .block(Block::default().borders(Borders::ALL));
     frame.render_widget(title, chunks[0]);
 
+    // Column selector (Browser mode only)
+    if picker.mode == ColorPickerMode::Browser {
+        let groups = get_color_groups();
+        let mut columns = vec![Span::raw("RGB")];
+
+        for (i, group) in groups.iter().enumerate() {
+            columns.push(Span::raw("  "));
+            let style = if i == picker.selected_group {
+                Style::default()
+                    .add_modifier(Modifier::BOLD)
+                    .fg(ratatui::style::Color::Cyan)
+            } else {
+                Style::default()
+            };
+            columns.push(Span::styled(
+                format!("{} {}", group.emoji, group.name),
+                style,
+            ));
+        }
+
+        let selector = Paragraph::new(Line::from(columns))
+            .block(Block::default().borders(Borders::ALL).title("Groups"));
+        frame.render_widget(selector, chunks[1]);
+    }
+
     // Color preview with name lookup
     let color_name = ColorName::similar([picker.r, picker.g, picker.b]);
     let spaced_name = to_spaced_name(&color_name);
 
+    let preview_chunk = if picker.mode == ColorPickerMode::Browser {
+        chunks[2]
+    } else {
+        chunks[1]
+    };
+
     let preview = Paragraph::new(vec![
+        Line::from(spaced_name),
+        Line::from(rgb_boxes(picker.r, picker.g, picker.b)),
         Line::from(format!(
-            "Current: {}",
-            crate::ui::theme::color_indicator(picker.r, picker.g, picker.b)
-        )),
-        Line::from(format!(
-            "Name: {}",
-            spaced_name
-        )),
-        Line::from(format!(
-            "RGB: ({}, {}, {})",
-            picker.r, picker.g, picker.b
-        )),
-        Line::from(format!(
-            "Hex: #{:02X}{:02X}{:02X}",
-            picker.r, picker.g, picker.b
+            "RGB({:3},{:3},{:3})  #{:02X}{:02X}{:02X}",
+            picker.r, picker.g, picker.b, picker.r, picker.g, picker.b
         )),
     ])
     .block(Block::default().borders(Borders::ALL).title("Preview"));
-    frame.render_widget(preview, chunks[1]);
+    frame.render_widget(preview, preview_chunk);
 
     // Main content area - either RGB sliders or color browser
+    let main_chunk = if picker.mode == ColorPickerMode::Browser {
+        chunks[3]
+    } else {
+        chunks[2]
+    };
+
     match picker.mode {
         ColorPickerMode::Rgb => {
             // RGB sliders
-            let r_style = if picker.selected_channel == 0 { theme.highlight } else { theme.text };
-            let g_style = if picker.selected_channel == 1 { theme.highlight } else { theme.text };
-            let b_style = if picker.selected_channel == 2 { theme.highlight } else { theme.text };
+            let r_style = if picker.selected_channel == 0 {
+                theme.highlight
+            } else {
+                theme.text
+            };
+            let g_style = if picker.selected_channel == 1 {
+                theme.highlight
+            } else {
+                theme.text
+            };
+            let b_style = if picker.selected_channel == 2 {
+                theme.highlight
+            } else {
+                theme.text
+            };
 
             let sliders = Paragraph::new(vec![
                 Line::from(vec![
@@ -190,45 +263,71 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
                 ]),
             ])
             .block(Block::default().borders(Borders::ALL).title("RGB Channels"));
-            frame.render_widget(sliders, chunks[2]);
+            frame.render_widget(sliders, main_chunk);
         }
         ColorPickerMode::Browser => {
-            // Color browser
+            // Color browser - just show color names with simple swatches
             let groups = get_color_groups();
             if let Some(group) = groups.get(picker.selected_group) {
-                let items: Vec<ListItem> = group.colors.iter().enumerate().map(|(i, (name, rgb))| {
-                    let spaced = to_spaced_name(name);
-                    let is_selected = i == picker.selected_color;
-                    let style = if is_selected {
-                        Style::default().add_modifier(Modifier::BOLD).fg(ratatui::style::Color::Cyan)
-                    } else {
-                        Style::default()
-                    };
+                let items: Vec<ListItem> = group
+                    .colors
+                    .iter()
+                    .enumerate()
+                    .map(|(i, (name, rgb))| {
+                        let spaced = to_spaced_name(name);
+                        let is_selected = i == picker.selected_color;
+                        let style = if is_selected {
+                            Style::default()
+                                .add_modifier(Modifier::BOLD)
+                                .fg(ratatui::style::Color::Cyan)
+                        } else {
+                            Style::default()
+                        };
 
-                    let color_swatch = crate::ui::theme::color_indicator(rgb[0], rgb[1], rgb[2]);
-                    ListItem::new(Line::from(vec![
-                        Span::styled(format!("{} ", color_swatch), style),
-                        Span::styled(spaced, style),
-                    ]))
-                }).collect();
+                        // Simple emoji swatch based on color group
+                        ListItem::new(Line::from(vec![
+                            Span::styled(format!("{}  ", group.emoji), style),
+                            Span::styled(format!("{:<25}", spaced), style),
+                            Span::styled(
+                                format!("RGB({:3},{:3},{:3})", rgb[0], rgb[1], rgb[2]),
+                                if is_selected {
+                                    theme.dim
+                                } else {
+                                    Style::default().fg(ratatui::style::Color::DarkGray)
+                                },
+                            ),
+                        ]))
+                    })
+                    .collect();
 
-                let list = List::new(items)
-                    .block(Block::default()
+                let list = List::new(items).block(
+                    Block::default()
                         .borders(Borders::ALL)
-                        .title(format!("{} {} Colors", group.emoji, group.name)));
-                frame.render_widget(list, chunks[2]);
+                        .title(format!("{} {} Colors", group.emoji, group.name)),
+                );
+                frame.render_widget(list, main_chunk);
             }
         }
     }
 
-    // Help text changes based on mode
+    // Help text
+    let help_chunk = if picker.mode == ColorPickerMode::Browser {
+        chunks[4]
+    } else {
+        chunks[3]
+    };
+
     let help_text = match picker.mode {
-        ColorPickerMode::Rgb => "[↑↓] Switch Channel  [←→] Adjust ±10  [Tab] Color Browser  [Enter] Apply  [Esc] Cancel",
-        ColorPickerMode::Browser => "[↑↓] Navigate Colors  [←→] Switch Group  [Enter] Select  [Tab] RGB Mode  [Esc] Cancel",
+        ColorPickerMode::Rgb => {
+            "[↑↓] Channel  [←→] Adjust ±10  [Tab] Browser  [Enter] Apply  [Esc] Cancel"
+        }
+        ColorPickerMode::Browser => {
+            "[↑↓] Colors  [←→] Groups  [Enter] Select  [Tab] RGB  [Esc] Cancel"
+        }
     };
 
     let help = Paragraph::new(help_text)
         .style(theme.dim)
         .block(Block::default().borders(Borders::ALL).title("Controls"));
-    frame.render_widget(help, chunks[3]);
+    frame.render_widget(help, help_chunk);
 }

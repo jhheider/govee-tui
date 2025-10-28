@@ -29,12 +29,14 @@ pub fn render_with_style(
         .split(area);
 
     // Device header with emoji
-    let device_emoji = if device.is_group { "📦" } else { Emoji::LIGHT };
+    let device_emoji = if device.is_group {
+        "📦"
+    } else {
+        Emoji::LIGHT
+    };
     let header = Paragraph::new(format!(
         "{} {} ({})",
-        device_emoji,
-        device.name,
-        device.model
+        device_emoji, device.name, device.model
     ))
     .style(theme.title)
     .block(
@@ -57,10 +59,18 @@ pub fn render_with_style(
 
     // Build capabilities list
     let mut caps = vec![];
-    if device.supports_power { caps.push("⚡Power"); }
-    if device.supports_brightness { caps.push("☀️Bright"); }
-    if device.supports_color { caps.push("🎨Color"); }
-    if device.supports_color_temp { caps.push("🌡️Temp"); }
+    if device.supports_power {
+        caps.push("⚡Power");
+    }
+    if device.supports_brightness {
+        caps.push("☀️Bright");
+    }
+    if device.supports_color {
+        caps.push("🎨Color");
+    }
+    if device.supports_color_temp {
+        caps.push("🌡️Temp");
+    }
     let caps_str = if caps.is_empty() {
         "None".to_string()
     } else {
@@ -89,26 +99,31 @@ pub fn render_with_style(
         let (brightness_text, bar_text) = if let Some(s) = state {
             if let Some(brightness) = s.brightness {
                 let bar = theme::brightness_bar(brightness as u8, 20);
-                (format!("{} Brightness: {}%", Emoji::BRIGHTNESS, brightness), bar)
+                (
+                    format!("{} Brightness: {}%", Emoji::BRIGHTNESS, brightness),
+                    bar,
+                )
             } else {
-                (format!("{} Brightness: Unknown", Emoji::BRIGHTNESS), String::new())
+                (
+                    format!("{} Brightness: Unknown", Emoji::BRIGHTNESS),
+                    String::new(),
+                )
             }
         } else {
-            (format!("{} Brightness: Loading...", Emoji::BRIGHTNESS), String::new())
+            (
+                format!("{} Brightness: Loading...", Emoji::BRIGHTNESS),
+                String::new(),
+            )
         };
 
-        let brightness_widget = Paragraph::new(vec![
-            Line::from(brightness_text),
-            Line::from(bar_text),
-        ])
-        .block(Block::default().borders(Borders::ALL).title("Brightness"));
+        let brightness_widget =
+            Paragraph::new(vec![Line::from(brightness_text), Line::from(bar_text)])
+                .block(Block::default().borders(Borders::ALL).title("Brightness"));
         frame.render_widget(brightness_widget, chunks[2]);
     } else {
-        let brightness_widget = Paragraph::new(vec![
-            Line::from("Not supported by this device"),
-        ])
-        .style(theme.dim)
-        .block(Block::default().borders(Borders::ALL).title("Brightness"));
+        let brightness_widget = Paragraph::new(vec![Line::from("Not supported by this device")])
+            .style(theme.dim)
+            .block(Block::default().borders(Borders::ALL).title("Brightness"));
         frame.render_widget(brightness_widget, chunks[2]);
     }
 
@@ -143,11 +158,9 @@ pub fn render_with_style(
             Paragraph::new(lines).block(Block::default().borders(Borders::ALL).title("Color"));
         frame.render_widget(color_widget, chunks[3]);
     } else {
-        let color_widget = Paragraph::new(vec![
-            Line::from("Not supported by this device"),
-        ])
-        .style(theme.dim)
-        .block(Block::default().borders(Borders::ALL).title("Color"));
+        let color_widget = Paragraph::new(vec![Line::from("Not supported by this device")])
+            .style(theme.dim)
+            .block(Block::default().borders(Borders::ALL).title("Color"));
         frame.render_widget(color_widget, chunks[3]);
     }
 
@@ -186,8 +199,10 @@ pub fn render_with_style(
         Span::raw(" Switch Focus"),
     ]));
 
-    let help = Paragraph::new(help_lines)
-        .style(theme.text)
-        .block(Block::default().borders(Borders::ALL).title("Available Controls"));
+    let help = Paragraph::new(help_lines).style(theme.text).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Available Controls"),
+    );
     frame.render_widget(help, chunks[4]);
 }

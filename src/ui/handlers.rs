@@ -1,7 +1,7 @@
-use crossterm::event::{KeyCode, KeyModifiers};
 use super::app::App;
 use super::focus::Focus;
 use super::view_state::Modal;
+use crossterm::event::{KeyCode, KeyModifiers};
 
 impl App {
     pub fn handle_key(&mut self, key: KeyCode, modifiers: KeyModifiers) {
@@ -96,9 +96,8 @@ impl App {
                     .and_then(|s| s.color)
                     .map(|c| (c.r, c.g, c.b))
                     .unwrap_or((255, 255, 255));
-                self.state.modal = Modal::ColorPicker(
-                    crate::ui::widgets::color_picker::ColorPicker::new(r, g, b)
-                );
+                self.state.modal =
+                    Modal::ColorPicker(crate::ui::widgets::color_picker::ColorPicker::new(r, g, b));
             }
 
             _ => {}

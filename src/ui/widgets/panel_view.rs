@@ -92,12 +92,12 @@ pub fn render(
 
     // Calculate column widths
     let widths = [
-        Constraint::Length(4),   // Type
+        Constraint::Length(4),      // Type
         Constraint::Percentage(30), // Name
         Constraint::Percentage(25), // Model
-        Constraint::Length(8),   // Power
-        Constraint::Length(10),  // Brightness
-        Constraint::Length(6),   // Online
+        Constraint::Length(8),      // Power
+        Constraint::Length(10),     // Brightness
+        Constraint::Length(6),      // Online
     ];
 
     let table = Table::new(rows, widths)
@@ -124,7 +124,8 @@ pub fn render(
         height: 3,
     };
 
-    let help_text = "[Space] Toggle  [↑↓] Navigate  [Enter] Detail  [Tab] List View  [R] Refresh  [Q] Quit";
+    let help_text =
+        "[Space] Toggle  [↑↓] Navigate  [Enter] Detail  [Tab] List View  [R] Refresh  [Q] Quit";
     let help_widget = Block::default()
         .borders(Borders::ALL)
         .title("Controls")

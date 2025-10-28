@@ -36,7 +36,13 @@ impl Client {
 
         for (i, device) in converted.iter().enumerate() {
             let type_str = if device.is_group { "GROUP" } else { "DEVICE" };
-            debug!("  {} {}: {} ({})", type_str, i + 1, device.name, device.model);
+            debug!(
+                "  {} {}: {} ({})",
+                type_str,
+                i + 1,
+                device.name,
+                device.model
+            );
         }
 
         Ok(converted)
@@ -65,7 +71,9 @@ impl Client {
                 self.inner.set_color(device_id, model, color).await?;
             }
             Command::ColorTemp(kelvin) => {
-                self.inner.set_color_temperature(device_id, model, kelvin as i32).await?;
+                self.inner
+                    .set_color_temperature(device_id, model, kelvin as i32)
+                    .await?;
             }
         }
 

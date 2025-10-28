@@ -24,7 +24,13 @@ impl App {
         let layout = MultiPaneLayout::new(frame);
 
         // Render overview panel (top)
-        widgets::overview::render(&self.devices, self.loading, &self.theme, frame, layout.overview);
+        widgets::overview::render(
+            &self.devices,
+            self.loading,
+            &self.theme,
+            frame,
+            layout.overview,
+        );
 
         // Render device list (left) with focus indicator
         let list_style = if self.state.focus == Focus::List {
@@ -67,20 +73,15 @@ impl App {
         );
 
         // Render footer with context-dependent keybindings (bottom)
-        widgets::footer::render(
-            &self.state.focus,
-            &self.theme,
-            frame,
-            layout.footer,
-        );
+        widgets::footer::render(&self.state.focus, &self.theme, frame, layout.footer);
     }
 
     fn render_help_modal(&self, frame: &mut Frame) {
+        use crate::ui::theme::Emoji;
         use ratatui::{
-            layout::{Constraint, Direction, Layout, Rect},
+            layout::Rect,
             widgets::{Block, Borders, Clear, Paragraph},
         };
-        use crate::ui::theme::Emoji;
 
         // Center the modal
         let area = frame.area();

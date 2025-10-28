@@ -71,7 +71,7 @@ impl App {
         let new_index =
             (self.state.selected_index as isize + delta).rem_euclid(len as isize) as usize;
         self.state.selected_index = new_index;
-        
+
         // Clear device state when moving to a new device
         self.state.device_state = None;
     }
@@ -160,7 +160,10 @@ impl App {
             AsyncResponse::ColorApplied(Ok((r, g, b))) => {
                 // Get closest color name
                 let color_name = color_name::css::Color::similar([r, g, b]);
-                self.state.status_message = Some(format!("Color set to {} RGB({},{},{})", color_name, r, g, b));
+                self.state.status_message = Some(format!(
+                    "Color set to {} RGB({},{},{})",
+                    color_name, r, g, b
+                ));
                 self.state.error_message = None;
                 // Optimistically update local state for instant feedback
                 if let Some(state) = &mut self.state.device_state {

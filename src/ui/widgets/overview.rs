@@ -26,16 +26,22 @@ pub fn render(devices: &[Device], loading: bool, theme: &Theme, frame: &mut Fram
         ]),
         Line::from(vec![
             Span::raw(format!("Total: {} ", total)),
-            Span::styled(format!("({} 📦 groups, {} 💡 devices)", groups, individuals), theme.dim),
+            Span::styled(
+                format!("({} 📦 groups, {} 💡 devices)", groups, individuals),
+                theme.dim,
+            ),
             Span::raw("  "),
-            Span::styled(format!("Online: {}", online), if online > 0 { theme.success } else { theme.dim }),
+            Span::styled(
+                format!("Online: {}", online),
+                if online > 0 { theme.success } else { theme.dim },
+            ),
             Span::raw("  "),
             Span::styled(format!("Controllable: {}", controllable), theme.text),
         ]),
     ];
 
-    let overview = Paragraph::new(lines)
-        .block(Block::default().borders(Borders::ALL).style(theme.border));
+    let overview =
+        Paragraph::new(lines).block(Block::default().borders(Borders::ALL).style(theme.border));
 
     frame.render_widget(overview, area);
 }

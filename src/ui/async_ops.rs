@@ -72,10 +72,8 @@ pub fn spawn_worker(
                         .collect();
 
                     let results = futures::future::join_all(futures).await;
-                    let states: Vec<Option<DeviceState>> = results
-                        .into_iter()
-                        .map(|r| r.ok())
-                        .collect();
+                    let states: Vec<Option<DeviceState>> =
+                        results.into_iter().map(|r| r.ok()).collect();
 
                     AsyncResponse::AllDeviceStatesLoaded(states)
                 }
