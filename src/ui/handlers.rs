@@ -122,6 +122,29 @@ impl App {
                         }
                         self.state.close_modal();
                     }
+                    // Up/Down to switch channel
+                    KeyCode::Up => {
+                        if let Modal::ColorPicker(ref mut picker) = self.state.modal {
+                            picker.prev_channel();
+                        }
+                    }
+                    KeyCode::Down => {
+                        if let Modal::ColorPicker(ref mut picker) = self.state.modal {
+                            picker.next_channel();
+                        }
+                    }
+                    // Left/Right to adjust value
+                    KeyCode::Left => {
+                        if let Modal::ColorPicker(ref mut picker) = self.state.modal {
+                            picker.adjust(-10);
+                        }
+                    }
+                    KeyCode::Right => {
+                        if let Modal::ColorPicker(ref mut picker) = self.state.modal {
+                            picker.adjust(10);
+                        }
+                    }
+                    // Tab still works as alternative
                     KeyCode::Tab => {
                         if let Modal::ColorPicker(ref mut picker) = self.state.modal {
                             picker.next_channel();
@@ -130,16 +153,6 @@ impl App {
                     KeyCode::BackTab => {
                         if let Modal::ColorPicker(ref mut picker) = self.state.modal {
                             picker.prev_channel();
-                        }
-                    }
-                    KeyCode::Up => {
-                        if let Modal::ColorPicker(ref mut picker) = self.state.modal {
-                            picker.adjust(10);
-                        }
-                    }
-                    KeyCode::Down => {
-                        if let Modal::ColorPicker(ref mut picker) = self.state.modal {
-                            picker.adjust(-10);
                         }
                     }
                     _ => {}
