@@ -171,7 +171,7 @@ async fn cmd_list_devices(client: &api::Client) -> Result<()> {
 }
 
 async fn cmd_device_status(client: &api::Client, device_query: &str) -> Result<()> {
-    println!("🔍 Searching for device: {}\n", device_query);
+    println!("🔍 Searching for device: {device_query}\n");
 
     let devices = client.get_devices().await?;
     let device = find_device(&devices, device_query)?;
@@ -211,7 +211,7 @@ async fn cmd_device_status(client: &api::Client, device_query: &str) -> Result<(
             );
 
             if let Some(brightness) = state.brightness {
-                println!("   Brightness: {}%", brightness);
+                println!("   Brightness: {brightness}%");
             }
 
             if let Some(color) = state.color {
@@ -222,11 +222,11 @@ async fn cmd_device_status(client: &api::Client, device_query: &str) -> Result<(
             }
 
             if let Some(temp) = state.color_temp {
-                println!("   Color Temp: {}K", temp);
+                println!("   Color Temp: {temp}K");
             }
         }
         Err(e) => {
-            println!("\n❌ Failed to get device state: {}", e);
+            println!("\n❌ Failed to get device state: {e}");
         }
     }
 
@@ -240,7 +240,7 @@ async fn cmd_control_device(
 ) -> Result<()> {
     use api::Command;
 
-    println!("🔍 Searching for device: {}\n", device_query);
+    println!("🔍 Searching for device: {device_query}\n");
 
     let devices = client.get_devices().await?;
     let device = find_device(&devices, device_query)?;
@@ -260,18 +260,17 @@ async fn cmd_control_device(
             Command::turn(on)
         }
         ControlCommand::Brightness { value } => {
-            println!("🔆 Setting brightness to {}%...", value);
+            println!("🔆 Setting brightness to {value}%...");
             Command::brightness(value)
         }
         ControlCommand::Color { r, g, b } => {
             println!(
-                "🌈 Setting color to RGB({}, {}, {}) #{:02X}{:02X}{:02X}...",
-                r, g, b, r, g, b
+                "🌈 Setting color to RGB({r}, {g}, {b}) #{r:02X}{g:02X}{b:02X}..."
             );
             Command::color(r, g, b)
         }
         ControlCommand::Temp { kelvin } => {
-            println!("🌡️  Setting color temperature to {}K...", kelvin);
+            println!("🌡️  Setting color temperature to {kelvin}K...");
             Command::temperature(kelvin)
         }
     };
@@ -300,10 +299,10 @@ fn find_device<'a>(devices: &'a [api::Device], query: &str) -> Result<&'a api::D
         .collect();
 
     match matches.len() {
-        0 => anyhow::bail!("❌ No device found matching '{}'", query),
+        0 => anyhow::bail!("❌ No device found matching '{query}'"),
         1 => Ok(matches[0]),
         _ => {
-            println!("⚠️  Multiple devices match '{}':", query);
+            println!("⚠️  Multiple devices match '{query}':");
             for device in matches {
                 println!("   - {} ({})", device.name, device.id);
             }

@@ -80,7 +80,7 @@ pub fn color_indicator(r: u8, g: u8, b: u8) -> String {
         (255, 0, 255) => "🟣 Magenta".to_string(),
         (0, 255, 255) => "🔵 Cyan".to_string(),
         (255, 255, 255) => "⚪ White".to_string(),
-        _ => format!("🌈 RGB({},{},{})", r, g, b),
+        _ => format!("🌈 RGB({r},{g},{b})"),
     }
 }
 
@@ -90,6 +90,6 @@ pub fn temp_indicator(kelvin: u16) -> String {
     } else if kelvin > 6000 {
         format!("{}K {}", kelvin, Emoji::COOL)
     } else {
-        format!("{}K", kelvin)
+        format!("{kelvin}K")
     }
 }

@@ -287,7 +287,7 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
                         // Simple emoji swatch based on color group
                         ListItem::new(Line::from(vec![
                             Span::styled(format!("{}  ", group.emoji), style),
-                            Span::styled(format!("{:<25}", spaced), style),
+                            Span::styled(format!("{spaced:<25}"), style),
                             Span::styled(
                                 format!("RGB({:3},{:3},{:3})", rgb[0], rgb[1], rgb[2]),
                                 if is_selected {

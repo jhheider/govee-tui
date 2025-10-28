@@ -25,18 +25,18 @@ pub fn render(devices: &[Device], loading: bool, theme: &Theme, frame: &mut Fram
             Span::styled(status, theme.dim),
         ]),
         Line::from(vec![
-            Span::raw(format!("Total: {} ", total)),
+            Span::raw(format!("Total: {total} ")),
             Span::styled(
-                format!("({} 📦 groups, {} 💡 devices)", groups, individuals),
+                format!("({groups} 📦 groups, {individuals} 💡 devices)"),
                 theme.dim,
             ),
             Span::raw("  "),
             Span::styled(
-                format!("Online: {}", online),
+                format!("Online: {online}"),
                 if online > 0 { theme.success } else { theme.dim },
             ),
             Span::raw("  "),
-            Span::styled(format!("Controllable: {}", controllable), theme.text),
+            Span::styled(format!("Controllable: {controllable}"), theme.text),
         ]),
     ];
 

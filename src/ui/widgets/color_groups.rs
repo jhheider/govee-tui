@@ -7,7 +7,7 @@ pub fn to_spaced_name(camel: &str) -> String {
         result.push(first);
     }
 
-    while let Some(ch) = chars.next() {
+    for ch in chars {
         if ch.is_uppercase() {
             result.push(' ');
         }

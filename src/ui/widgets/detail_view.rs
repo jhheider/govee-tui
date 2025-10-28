@@ -98,7 +98,7 @@ pub fn render_with_style(
     if device.supports_brightness {
         let (brightness_text, bar_text) = if let Some(s) = state {
             if let Some(brightness) = s.brightness {
-                let bar = theme::brightness_bar(brightness as u8, 20);
+                let bar = theme::brightness_bar(brightness, 20);
                 (
                     format!("{} Brightness: {}%", Emoji::BRIGHTNESS, brightness),
                     bar,

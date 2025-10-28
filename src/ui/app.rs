@@ -128,7 +128,7 @@ impl App {
                 self.state.error_message = None;
             }
             AsyncResponse::DevicesRefreshed(Err(e)) => {
-                self.state.error_message = Some(format!("Failed to refresh devices: {}", e));
+                self.state.error_message = Some(format!("Failed to refresh devices: {e}"));
             }
 
             AsyncResponse::DeviceStateLoaded(Ok(state)) => {
@@ -136,7 +136,7 @@ impl App {
                 self.state.error_message = None;
             }
             AsyncResponse::DeviceStateLoaded(Err(e)) => {
-                self.state.error_message = Some(format!("Failed to load device state: {}", e));
+                self.state.error_message = Some(format!("Failed to load device state: {e}"));
             }
 
             AsyncResponse::AllDeviceStatesLoaded(_states) => {
@@ -144,7 +144,7 @@ impl App {
             }
 
             AsyncResponse::BrightnessApplied(Ok(value)) => {
-                self.state.status_message = Some(format!("Brightness set to {}%", value));
+                self.state.status_message = Some(format!("Brightness set to {value}%"));
                 self.state.error_message = None;
                 // Optimistically update local state for instant feedback
                 if let Some(state) = &mut self.state.device_state {
@@ -154,15 +154,14 @@ impl App {
                 // User can press 'r' to manually refresh if needed
             }
             AsyncResponse::BrightnessApplied(Err(e)) => {
-                self.state.error_message = Some(format!("Failed to set brightness: {}", e));
+                self.state.error_message = Some(format!("Failed to set brightness: {e}"));
             }
 
             AsyncResponse::ColorApplied(Ok((r, g, b))) => {
                 // Get closest color name
                 let color_name = color_name::css::Color::similar([r, g, b]);
                 self.state.status_message = Some(format!(
-                    "Color set to {} RGB({},{},{})",
-                    color_name, r, g, b
+                    "Color set to {color_name} RGB({r},{g},{b})"
                 ));
                 self.state.error_message = None;
                 // Optimistically update local state for instant feedback
@@ -172,7 +171,7 @@ impl App {
                 // Don't refresh immediately - would overwrite optimistic update
             }
             AsyncResponse::ColorApplied(Err(e)) => {
-                self.state.error_message = Some(format!("Failed to set color: {}", e));
+                self.state.error_message = Some(format!("Failed to set color: {e}"));
             }
 
             AsyncResponse::PowerToggled(Ok(state)) => {
@@ -186,7 +185,7 @@ impl App {
                 // Don't refresh immediately - would overwrite optimistic update
             }
             AsyncResponse::PowerToggled(Err(e)) => {
-                self.state.error_message = Some(format!("Failed to toggle power: {}", e));
+                self.state.error_message = Some(format!("Failed to toggle power: {e}"));
             }
         }
     }

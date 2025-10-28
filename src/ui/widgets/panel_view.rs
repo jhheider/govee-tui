@@ -54,7 +54,7 @@ pub fn render(
 
             let brightness = if let Some(s) = state {
                 if let Some(b) = s.brightness {
-                    format!("{}%", b)
+                    format!("{b}%")
                 } else {
                     "  -  ".to_string()
                 }
