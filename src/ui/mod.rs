@@ -29,10 +29,30 @@ pub async fn run(client: api::Client, db: db::Database, config: config::Config) 
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = App::new(client, db, config);
-    app.refresh_devices().await?;
+
+    // Try to load devices, but don't fail if it errors
+    if let Err(e) = app.refresh_devices().await {
+        app.state.status_message = Some(format!("Failed to load devices: {}", e));
+    }
 
     let mut refresh_interval = interval(Duration::from_secs(5));
 
+    // Ensure terminal is restored even on panic or Ctrl-C
+    let result = run_loop(&mut terminal, &mut app, &mut refresh_interval).await;
+
+    // Always restore terminal
+    disable_raw_mode()?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
+    terminal.show_cursor()?;
+
+    result
+}
+
+async fn run_loop(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    app: &mut App,
+    refresh_interval: &mut tokio::time::Interval,
+) -> Result<()> {
     loop {
         terminal.draw(|f| app.render(f))?;
 
@@ -80,7 +100,7 @@ pub async fn run(client: api::Client, db: db::Database, config: config::Config) 
             }
         }
 
-        // Auto-refresh
+        // Auto-refresh (suppress errors)
         tokio::select! {
             _ = refresh_interval.tick() => {
                 let _ = app.refresh_devices().await;
@@ -92,11 +112,6 @@ pub async fn run(client: api::Client, db: db::Database, config: config::Config) 
             break;
         }
     }
-
-    // Restore terminal
-    disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
-    terminal.show_cursor()?;
 
     Ok(())
 }

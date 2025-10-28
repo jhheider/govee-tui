@@ -62,12 +62,28 @@ enum ControlCommand {
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    // Initialize logging
+    // Initialize logging (only to file in non-verbose mode)
     init_logging(cli.verbose)?;
-    info!("Starting govee-tui v{}", env!("CARGO_PKG_VERSION"));
 
     // Load configuration
     let config = config::Config::load(cli.config)?;
+
+    // Validate API key
+    if config.api.key.is_empty() || config.api.key == "YOUR_API_KEY_HERE" {
+        eprintln!("❌ Error: No Govee API key configured!");
+        eprintln!();
+        eprintln!("Please set your API key in: ~/.config/govee-tui/config.toml");
+        eprintln!();
+        eprintln!("To get an API key:");
+        eprintln!("  1. Download the Govee Home app");
+        eprintln!("  2. Go to Settings → About Us → Apply for API Key");
+        eprintln!("  3. Follow the email instructions");
+        eprintln!("  4. Add the key to your config file");
+        eprintln!();
+        std::process::exit(1);
+    }
+
+    info!("Starting govee-tui v{}", env!("CARGO_PKG_VERSION"));
 
     // Initialize database
     let db = db::Database::new(&config.database.path)?;
@@ -118,13 +134,18 @@ async fn execute_control(
 fn init_logging(verbose: bool) -> Result<()> {
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-    let filter = if verbose {
-        EnvFilter::new("govee_tui=debug,info")
+    if verbose {
+        // Verbose mode: log everything to stderr
+        let filter = EnvFilter::new("govee_tui=debug,info");
+        tracing_subscriber::registry().with(filter).with(tracing_subscriber::fmt::layer()).init();
     } else {
-        EnvFilter::new("govee_tui=info")
-    };
-
-    tracing_subscriber::registry().with(filter).with(tracing_subscriber::fmt::layer()).init();
+        // Non-verbose: suppress all logging (TUI mode should be clean)
+        let filter = EnvFilter::new("off");
+        tracing_subscriber::registry()
+            .with(filter)
+            .with(tracing_subscriber::fmt::layer().with_writer(std::io::sink))
+            .init();
+    }
 
     Ok(())
 }
