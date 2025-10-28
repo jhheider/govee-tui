@@ -100,11 +100,27 @@ pub fn render(device: &Device, state: Option<&DeviceState>, theme: &Theme, frame
         }
     }
 
-    // Controls help - contextual status bar
-    let help = Paragraph::new(
-        "[Space] On/Off  [↑↓] Brightness ±10%  [Shift+↑↓] ±5%  [C] Color  [Esc] Back  [?] Help",
-    )
-    .style(theme.dim)
-    .block(Block::default().borders(Borders::ALL).title("Controls"));
+    // Controls help - contextual status bar with more prominent styling
+    let help_lines = vec![
+        Line::from(vec![
+            Span::styled("[Space]", theme.highlight),
+            Span::raw(" Power On/Off  "),
+            Span::styled("[↑↓]", theme.highlight),
+            Span::raw(" Brightness ±10%  "),
+            Span::styled("[Shift+↑↓]", theme.highlight),
+            Span::raw(" ±5%  "),
+        ]),
+        Line::from(vec![
+            Span::styled("[C]", theme.highlight),
+            Span::raw(" Color Picker  "),
+            Span::styled("[Esc]", theme.highlight),
+            Span::raw(" Back to List  "),
+            Span::styled("[?]", theme.highlight),
+            Span::raw(" Help"),
+        ]),
+    ];
+    let help = Paragraph::new(help_lines)
+        .style(theme.text)
+        .block(Block::default().borders(Borders::ALL).title("Interactive Controls"));
     frame.render_widget(help, chunks[4]);
 }

@@ -23,7 +23,11 @@ pub fn render<'a>(
                 "⚪"
             };
 
-            let device_emoji = Emoji::LIGHT;
+            let device_emoji = if device.is_group {
+                "📦" // Group emoji
+            } else {
+                Emoji::LIGHT
+            };
 
             // Multi-select indicator
             let select_indicator = if selected_devices.contains(&i) {

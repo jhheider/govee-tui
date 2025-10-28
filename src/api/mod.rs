@@ -40,25 +40,31 @@ impl Client {
         let devices: Vec<Device> = response
             .data
             .into_iter()
-            .map(|new_dev| Device {
-                id: new_dev.device,
-                name: new_dev.device_name,
-                model: new_dev.sku,
-                controllable: new_dev.capabilities.iter().any(|c| {
-                    c.capability_type == "devices.capabilities.on_off"
-                }),
-                retrievable: new_dev.capabilities.iter().any(|c| {
-                    c.capability_type == "devices.capabilities.range"
-                        || c.capability_type == "devices.capabilities.color_setting"
-                }),
-                online: true, // New API doesn't provide online status in device list
+            .map(|new_dev| {
+                let is_group = new_dev.sku == "SameModeGroup";
+                Device {
+                    id: new_dev.device,
+                    name: new_dev.device_name,
+                    model: new_dev.sku.clone(),
+                    controllable: new_dev.capabilities.iter().any(|c| {
+                        c.capability_type == "devices.capabilities.on_off"
+                    }),
+                    retrievable: new_dev.capabilities.iter().any(|c| {
+                        c.capability_type == "devices.capabilities.range"
+                            || c.capability_type == "devices.capabilities.color_setting"
+                    }),
+                    online: true, // New API doesn't provide online status in device list
+                    is_group,
+                    device_type: new_dev.device_type,
+                }
             })
             .collect();
 
         info!("Successfully parsed {} devices from new API", devices.len());
         for (i, device) in devices.iter().enumerate() {
-            debug!("  Device {}: {} ({}) - controllable: {}",
-                i + 1, device.name, device.model, device.controllable);
+            let type_str = if device.is_group { "GROUP" } else { "DEVICE" };
+            debug!("  {} {}: {} ({}) - controllable: {}",
+                type_str, i + 1, device.name, device.model, device.controllable);
         }
 
         Ok(devices)

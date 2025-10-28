@@ -4,6 +4,7 @@ use crate::ui::widgets::{brightness::BrightnessControl, color_picker::ColorPicke
 #[derive(Debug, Clone, PartialEq)]
 pub enum ViewMode {
     List,
+    Panel, // htop-style panel view
     Detail,
     Brightness,
     ColorPicker,
@@ -17,6 +18,7 @@ pub struct AppState {
     pub selected_devices: Vec<usize>, // Multi-select indices
     pub search_query: String,
     pub device_state: Option<DeviceState>,
+    pub all_device_states: Vec<Option<DeviceState>>, // For panel view
     pub brightness_control: Option<BrightnessControl>,
     pub color_picker: Option<ColorPicker>,
     pub status_message: Option<String>,
@@ -30,10 +32,15 @@ impl AppState {
             selected_devices: Vec::new(),
             search_query: String::new(),
             device_state: None,
+            all_device_states: Vec::new(),
             brightness_control: None,
             color_picker: None,
             status_message: None,
         }
+    }
+
+    pub fn enter_panel_view(&mut self) {
+        self.view_mode = ViewMode::Panel;
     }
 
     pub fn enter_detail_view(&mut self) {

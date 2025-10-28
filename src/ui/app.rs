@@ -148,6 +148,10 @@ impl App {
                 self.state.status_message = Some(format!("Failed to load state: {}", e));
             }
 
+            AsyncResponse::AllDeviceStatesLoaded(states) => {
+                self.state.all_device_states = states;
+            }
+
             AsyncResponse::BrightnessApplied(Ok(value)) => {
                 self.state.status_message = Some(format!("Brightness set to {}%", value));
             }
@@ -170,5 +174,20 @@ impl App {
                 self.state.status_message = Some(format!("Failed to toggle power: {}", e));
             }
         }
+    }
+
+    pub fn request_load_all_device_states(&mut self) {
+        if self.devices.is_empty() {
+            return;
+        }
+
+        let devices: Vec<(String, String)> = self
+            .devices
+            .iter()
+            .map(|d| (d.id.clone(), d.model.clone()))
+            .collect();
+
+        self.loading = true;
+        let _ = self.cmd_tx.send(AsyncCommand::LoadAllDeviceStates { devices });
     }
 }

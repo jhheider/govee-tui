@@ -14,6 +14,7 @@ impl App {
     pub fn render(&self, frame: &mut Frame) {
         match &self.state.view_mode {
             ViewMode::List => self.render_list(frame),
+            ViewMode::Panel => self.render_panel(frame),
             ViewMode::Detail => self.render_detail(frame),
             ViewMode::Brightness => self.render_brightness(frame),
             ViewMode::ColorPicker => self.render_color_picker(frame),
@@ -70,7 +71,7 @@ impl App {
         } else if let Some(msg) = &self.state.status_message {
             msg.to_string()
         } else {
-            "[↑↓] Navigate  [Enter] Details  [Space] Select  [R]efresh  [Ctrl+F] Search  [?] Help  [Q]uit".to_string()
+            "[↑↓] Navigate  [Enter] Details  [Space] Select  [Tab] Panel  [R]efresh  [?] Help  [Q]uit".to_string()
         };
 
         let status = Paragraph::new(status_text).style(self.theme.dim).block(
@@ -79,6 +80,16 @@ impl App {
                 .style(self.theme.border),
         );
         frame.render_widget(status, chunks[2]);
+    }
+
+    fn render_panel(&self, frame: &mut Frame) {
+        widgets::panel_view::render(
+            &self.devices,
+            &self.state.all_device_states,
+            self.state.selected_index,
+            &self.theme,
+            frame,
+        );
     }
 
     fn render_detail(&self, frame: &mut Frame) {
@@ -154,7 +165,15 @@ impl App {
             "  ↑/↓, j/k     Navigate devices".to_string(),
             "  Enter        View device details".to_string(),
             "  Space        Toggle multi-select".to_string(),
+            "  Tab          Switch to Panel view".to_string(),
             "  Ctrl+F       Search devices".to_string(),
+            "".to_string(),
+            "═══ PANEL VIEW ═══".to_string(),
+            "  ↑/↓, j/k     Navigate devices".to_string(),
+            "  Enter        View device details".to_string(),
+            "  Space        Toggle power ON/OFF".to_string(),
+            "  Tab          Switch to List view".to_string(),
+            "  r            Refresh all states".to_string(),
             "".to_string(),
             "═══ DETAIL VIEW ═══".to_string(),
             "  Space        Toggle power ON/OFF".to_string(),

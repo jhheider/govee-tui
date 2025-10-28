@@ -9,6 +9,9 @@ pub struct Device {
     pub controllable: bool,
     pub retrievable: bool,
     pub online: bool,
+    pub is_group: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_type: Option<String>, // Device type from API (e.g., "devices.types.light")
 }
 
 impl From<GoveeDevice> for Device {
@@ -20,6 +23,8 @@ impl From<GoveeDevice> for Device {
             controllable: device.controllable,
             retrievable: device.retrievable,
             online: true, // Default to online
+            is_group: false, // Old API doesn't have groups
+            device_type: None,
         }
     }
 }
