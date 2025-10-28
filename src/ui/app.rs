@@ -160,9 +160,8 @@ impl App {
             AsyncResponse::ColorApplied(Ok((r, g, b))) => {
                 // Get closest color name
                 let color_name = color_name::css::Color::similar([r, g, b]);
-                self.state.status_message = Some(format!(
-                    "Color set to {color_name} RGB({r},{g},{b})"
-                ));
+                self.state.status_message =
+                    Some(format!("Color set to {color_name} RGB({r},{g},{b})"));
                 self.state.error_message = None;
                 // Optimistically update local state for instant feedback
                 if let Some(state) = &mut self.state.device_state {

@@ -264,9 +264,7 @@ async fn cmd_control_device(
             Command::brightness(value)
         }
         ControlCommand::Color { r, g, b } => {
-            println!(
-                "🌈 Setting color to RGB({r}, {g}, {b}) #{r:02X}{g:02X}{b:02X}..."
-            );
+            println!("🌈 Setting color to RGB({r}, {g}, {b}) #{r:02X}{g:02X}{b:02X}...");
             Command::color(r, g, b)
         }
         ControlCommand::Temp { kelvin } => {
