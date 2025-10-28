@@ -127,24 +127,64 @@ govee-tui
 
 List all devices:
 ```bash
-govee-tui list
+govee-tui devices
+```
+
+Get device status:
+```bash
+# By name (fuzzy match)
+govee-tui status "Living Room"
+
+# By exact ID
+govee-tui status "AA:BB:CC:DD:EE:FF:11:22"
 ```
 
 Control devices:
 ```bash
 # Turn on/off
-govee-tui control <device-id> turn on
-govee-tui control <device-id> turn off
+govee-tui control "Living Room" turn on
+govee-tui control "Bedroom" turn off
 
 # Set brightness (0-100)
-govee-tui control <device-id> brightness 75
+govee-tui control "Kitchen" brightness 75
 
 # Set RGB color
-govee-tui control <device-id> color 255 0 0  # Red
+govee-tui control "Strip" color 255 0 0  # Red
 
 # Set color temperature (2000-9000K)
-govee-tui control <device-id> temp 4000
+govee-tui control "Desk Lamp" temp 4000
 ```
+
+### Direct API Testing (Developer Scripts)
+
+For debugging and testing the Govee API directly without the TUI, use the included bash scripts:
+
+```bash
+# Interactive test menu
+./scripts/test-api.sh
+
+# List all devices (saves to /tmp/govee-devices.json)
+./scripts/get-devices.sh
+
+# Get device state
+./scripts/get-device-state.sh "AA:BB:CC:DD:EE:FF:11:22" "H6159"
+
+# Control device
+./scripts/control-device.sh "AA:BB:CC:DD:EE:FF:11:22" "H6159" on
+./scripts/control-device.sh "AA:BB:CC:DD:EE:FF:11:22" "H6159" brightness:75
+./scripts/control-device.sh "AA:BB:CC:DD:EE:FF:11:22" "H6159" color:255,128,0
+```
+
+**Requirements:** `curl` and `jq`
+
+See [scripts/README.md](scripts/README.md) for full documentation.
+
+**Use cases:**
+- Debug missing devices issue (compare new vs legacy endpoints)
+- Test API without building the app
+- Verify API key and permissions
+- Quick device control from command line
+- CI/CD integration testing
 
 ## Supported Commands
 
