@@ -58,11 +58,15 @@ echo -e "${YELLOW}Device ID:${NC} ${DEVICE_ID}"
 echo -e "${YELLOW}Model:${NC} ${MODEL}"
 echo ""
 
-# Make request - device state uses query parameters
-RESPONSE=$(curl -s -w "\n%{http_code}" -X GET \
-    "${BASE_URL}${ENDPOINT}?device=${DEVICE_ID}&model=${MODEL}" \
+# Generate request ID
+REQUEST_ID="bash-$(date +%s%3N)"
+
+# Make request - device state uses POST with JSON body
+RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+    "${BASE_URL}${ENDPOINT}" \
     -H "Govee-API-Key: ${API_KEY}" \
-    -H "Content-Type: application/json")
+    -H "Content-Type: application/json" \
+    -d "{\"requestId\":\"${REQUEST_ID}\",\"payload\":{\"sku\":\"${MODEL}\",\"device\":\"${DEVICE_ID}\"}}")
 
 HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
 BODY=$(echo "$RESPONSE" | sed '$d')

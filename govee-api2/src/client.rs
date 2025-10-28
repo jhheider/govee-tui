@@ -56,17 +56,22 @@ impl GoveeClient {
 
     /// Get the current state of a device
     pub async fn get_device_state(&self, device_id: &str, sku: &str) -> Result<DeviceState> {
-        // The API uses GET with query parameters, not POST with JSON body
-        let url = format!(
-            "{}/router/api/v1/device/state?device={}&model={}",
-            API_BASE, device_id, sku
-        );
+        let url = format!("{}/router/api/v1/device/state", API_BASE);
+
+        let payload = json!({
+            "requestId": generate_request_id(),
+            "payload": {
+                "sku": sku,
+                "device": device_id
+            }
+        });
 
         let response = self
             .client
-            .get(&url)
+            .post(&url)
             .header("Govee-API-Key", &self.api_key)
             .header("Content-Type", "application/json")
+            .json(&payload)
             .send()
             .await?;
 
