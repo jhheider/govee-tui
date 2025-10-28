@@ -100,9 +100,11 @@ pub fn render(device: &Device, state: Option<&DeviceState>, theme: &Theme, frame
         }
     }
 
-    // Controls help
-    let help = Paragraph::new("[Esc] Back [B] Brightness [C] Color [T] Temp [Space] Toggle")
-        .style(theme.dim)
-        .block(Block::default().borders(Borders::ALL));
+    // Controls help - contextual status bar
+    let help = Paragraph::new(
+        "[Space] On/Off  [↑↓] Brightness ±10%  [Shift+↑↓] ±5%  [C] Color  [Esc] Back  [?] Help",
+    )
+    .style(theme.dim)
+    .block(Block::default().borders(Borders::ALL).title("Controls"));
     frame.render_widget(help, chunks[4]);
 }

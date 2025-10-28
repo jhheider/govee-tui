@@ -16,10 +16,11 @@ pub fn render<'a>(
         .iter()
         .enumerate()
         .map(|(i, device)| {
-            let status_emoji = if device.online {
-                Emoji::POWER_ON
+            // Show controllable status (we don't have power state in list view)
+            let status_emoji = if device.controllable {
+                Emoji::SUCCESS
             } else {
-                Emoji::POWER_OFF
+                "⚪"
             };
 
             let device_emoji = Emoji::LIGHT;

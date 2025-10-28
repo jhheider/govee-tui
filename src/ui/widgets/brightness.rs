@@ -52,14 +52,14 @@ pub fn render(brightness: &BrightnessControl, theme: &Theme, frame: &mut Frame) 
         Line::from(""),
         Line::from(bar),
         Line::from(""),
-        Line::from("[↑↓] Adjust ±5% [Shift+↑↓] Adjust ±1% [1-9] Set 10-90%"),
+        Line::from("Use arrow keys to adjust brightness"),
     ])
     .block(Block::default().borders(Borders::ALL).title("Control"));
     frame.render_widget(control, chunks[1]);
 
     // Help
-    let help = Paragraph::new("[Enter] Apply [Esc] Cancel")
+    let help = Paragraph::new("[↑↓] ±10%  [Shift+↑↓] ±5%  [1-9] Set  [Enter] Apply  [Esc] Cancel")
         .style(theme.dim)
-        .block(Block::default().borders(Borders::ALL));
+        .block(Block::default().borders(Borders::ALL).title("Controls"));
     frame.render_widget(help, chunks[2]);
 }

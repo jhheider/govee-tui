@@ -64,16 +64,13 @@ impl App {
         );
         frame.render_widget(device_list, chunks[1]);
 
-        // Status bar
+        // Status bar with contextual controls
         let status_text = if self.loading {
             format!("{} Loading...", Emoji::LOADING)
         } else if let Some(msg) = &self.state.status_message {
             msg.to_string()
         } else {
-            format!(
-                "{} API: Connected | {} DB: Ready | [Enter] Details [Space] Multi-Select [Ctrl+F] Search [?] Help [Q]uit [R]efresh",
-                Emoji::API, Emoji::DATABASE
-            )
+            "[↑↓] Navigate  [Enter] Details  [Space] Select  [R]efresh  [Ctrl+F] Search  [?] Help  [Q]uit".to_string()
         };
 
         let status = Paragraph::new(status_text).style(self.theme.dim).block(
@@ -160,21 +157,23 @@ impl App {
             "  Ctrl+F       Search devices".to_string(),
             "".to_string(),
             "═══ DETAIL VIEW ═══".to_string(),
-            "  b            Adjust brightness".to_string(),
+            "  Space        Toggle power ON/OFF".to_string(),
+            "  ↑/↓, j/k     Brightness ±10%".to_string(),
+            "  Shift+↑/↓    Brightness ±5% (fine)".to_string(),
             "  c            Change color (RGB)".to_string(),
             "  Esc          Back to list".to_string(),
             "".to_string(),
             "═══ BRIGHTNESS CONTROL ═══".to_string(),
-            "  ←/→, h/l     Adjust by 5%".to_string(),
-            "  Shift+←/→    Adjust by 1% (fine)".to_string(),
+            "  ↑/↓, j/k     Adjust by 10%".to_string(),
+            "  Shift+↑/↓    Adjust by 5% (fine)".to_string(),
             "  1-9          Set to 10%-90%".to_string(),
             "  Enter        Apply changes".to_string(),
             "  Esc          Cancel".to_string(),
             "".to_string(),
             "═══ COLOR PICKER ═══".to_string(),
             "  Tab          Switch R/G/B channel".to_string(),
-            "  ↑/↓          Adjust by 5".to_string(),
-            "  Shift+↑/↓    Adjust by 1 (fine)".to_string(),
+            "  ↑/↓, j/k     Adjust by 10".to_string(),
+            "  Shift+↑/↓    Adjust by 5 (fine)".to_string(),
             "  Enter        Apply color".to_string(),
             "  Esc          Cancel".to_string(),
             "".to_string(),

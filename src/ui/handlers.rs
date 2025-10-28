@@ -50,18 +50,46 @@ impl App {
 
     fn handle_detail_keys(&mut self, key: KeyCode, modifiers: KeyModifiers) {
         match (key, modifiers) {
-            (KeyCode::Esc, _) => {
+            (KeyCode::Esc, _) | (KeyCode::Char('q'), _) => {
                 self.state.exit_to_list();
             }
-            (KeyCode::Char('b'), _) => {
-                let current = self
-                    .state
-                    .device_state
-                    .as_ref()
-                    .and_then(|s| s.brightness)
-                    .unwrap_or(50);
-                self.state.enter_brightness_control(current);
+            // Direct brightness control with arrows (10% default, 5% fine-grained)
+            (KeyCode::Up, KeyModifiers::SHIFT) | (KeyCode::Char('k'), KeyModifiers::SHIFT) => {
+                if let Some(state) = &self.state.device_state {
+                    let current = state.brightness.unwrap_or(50);
+                    let new_brightness = (current + 5).min(100);
+                    self.request_apply_brightness(new_brightness);
+                }
             }
+            (KeyCode::Down, KeyModifiers::SHIFT) | (KeyCode::Char('j'), KeyModifiers::SHIFT) => {
+                if let Some(state) = &self.state.device_state {
+                    let current = state.brightness.unwrap_or(50);
+                    let new_brightness = current.saturating_sub(5);
+                    self.request_apply_brightness(new_brightness);
+                }
+            }
+            (KeyCode::Up, _) | (KeyCode::Char('k'), _) => {
+                if let Some(state) = &self.state.device_state {
+                    let current = state.brightness.unwrap_or(50);
+                    let new_brightness = (current + 10).min(100);
+                    self.request_apply_brightness(new_brightness);
+                }
+            }
+            (KeyCode::Down, _) | (KeyCode::Char('j'), _) => {
+                if let Some(state) = &self.state.device_state {
+                    let current = state.brightness.unwrap_or(50);
+                    let new_brightness = current.saturating_sub(10);
+                    self.request_apply_brightness(new_brightness);
+                }
+            }
+            // Toggle power with Space
+            (KeyCode::Char(' '), _) => {
+                if let Some(state) = &self.state.device_state {
+                    let new_power = !state.power;
+                    self.request_toggle_power(new_power);
+                }
+            }
+            // Advanced controls
             (KeyCode::Char('c'), _) => {
                 let (r, g, b) = self
                     .state
@@ -71,9 +99,6 @@ impl App {
                     .map(|c| (c.r, c.g, c.b))
                     .unwrap_or((255, 255, 255));
                 self.state.enter_color_picker(r, g, b);
-            }
-            (KeyCode::Char(' '), _) => {
-                // Toggle power will be handled async in main loop
             }
             _ => {}
         }
@@ -88,17 +113,18 @@ impl App {
                 (KeyCode::Enter, _) => {
                     // Apply will be handled async in main loop
                 }
-                (KeyCode::Up, KeyModifiers::SHIFT) => {
-                    brightness.adjust(1);
-                }
-                (KeyCode::Down, KeyModifiers::SHIFT) => {
-                    brightness.adjust(-1);
-                }
-                (KeyCode::Up, _) => {
+                (KeyCode::Up, KeyModifiers::SHIFT) | (KeyCode::Char('k'), KeyModifiers::SHIFT) => {
                     brightness.adjust(5);
                 }
-                (KeyCode::Down, _) => {
+                (KeyCode::Down, KeyModifiers::SHIFT)
+                | (KeyCode::Char('j'), KeyModifiers::SHIFT) => {
                     brightness.adjust(-5);
+                }
+                (KeyCode::Up, _) | (KeyCode::Char('k'), _) => {
+                    brightness.adjust(10);
+                }
+                (KeyCode::Down, _) | (KeyCode::Char('j'), _) => {
+                    brightness.adjust(-10);
                 }
                 (KeyCode::Char(c), _) if c.is_ascii_digit() => {
                     let digit = c.to_digit(10).unwrap() as u8;
@@ -126,17 +152,18 @@ impl App {
                 (KeyCode::BackTab, _) => {
                     picker.prev_channel();
                 }
-                (KeyCode::Up, KeyModifiers::SHIFT) => {
-                    picker.adjust(1);
-                }
-                (KeyCode::Down, KeyModifiers::SHIFT) => {
-                    picker.adjust(-1);
-                }
-                (KeyCode::Up, _) => {
+                (KeyCode::Up, KeyModifiers::SHIFT) | (KeyCode::Char('k'), KeyModifiers::SHIFT) => {
                     picker.adjust(5);
                 }
-                (KeyCode::Down, _) => {
+                (KeyCode::Down, KeyModifiers::SHIFT)
+                | (KeyCode::Char('j'), KeyModifiers::SHIFT) => {
                     picker.adjust(-5);
+                }
+                (KeyCode::Up, _) | (KeyCode::Char('k'), _) => {
+                    picker.adjust(10);
+                }
+                (KeyCode::Down, _) | (KeyCode::Char('j'), _) => {
+                    picker.adjust(-10);
                 }
                 _ => {}
             }

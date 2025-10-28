@@ -115,15 +115,17 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
             Span::raw("█".repeat((picker.b as usize * 20) / 255)),
         ]),
         Line::from(""),
-        Line::from("[Tab] Switch channel"),
-        Line::from("[↑↓] Adjust ±5 [Shift+↑↓] Adjust ±1"),
+        Line::from("Use Tab to switch channels"),
+        Line::from("Use arrow keys to adjust"),
     ])
     .block(Block::default().borders(Borders::ALL).title("Channels"));
     frame.render_widget(sliders, chunks[2]);
 
     // Help
-    let help = Paragraph::new("[Enter] Apply [Esc] Cancel")
-        .style(theme.dim)
-        .block(Block::default().borders(Borders::ALL));
+    let help = Paragraph::new(
+        "[Tab] Switch Channel  [↑↓] ±10  [Shift+↑↓] ±5  [Enter] Apply  [Esc] Cancel",
+    )
+    .style(theme.dim)
+    .block(Block::default().borders(Borders::ALL).title("Controls"));
     frame.render_widget(help, chunks[3]);
 }
