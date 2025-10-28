@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use govee_api::{structs::govee::PayloadBody, GoveeClient};
+use std::sync::Arc;
 use tracing::{debug, info};
 
 pub mod commands;
@@ -7,21 +8,27 @@ pub mod models;
 
 pub use commands::Command;
 pub use models::Device;
+pub use models::DeviceState;
 
+#[derive(Clone)]
 pub struct Client {
-    inner: GoveeClient,
+    inner: Arc<GoveeClient>,
 }
 
 impl Client {
     pub fn new(api_key: &str) -> Result<Self> {
-        let inner = GoveeClient::new(api_key);
+        let inner = Arc::new(GoveeClient::new(api_key));
         info!("Govee API client initialized");
         Ok(Self { inner })
     }
 
     pub async fn get_devices(&self) -> Result<Vec<Device>> {
         debug!("Fetching device list");
-        let response = self.inner.get_devices().await.context("Failed to fetch devices")?;
+        let response = self
+            .inner
+            .get_devices()
+            .await
+            .context("Failed to fetch devices")?;
 
         let devices: Vec<Device> = response
             .data
@@ -49,7 +56,10 @@ impl Client {
             cmd: command.to_govee_command(),
         };
 
-        self.inner.control_device(payload).await.context("Failed to control device")?;
+        self.inner
+            .control_device(payload)
+            .await
+            .context("Failed to control device")?;
 
         info!("Device {} controlled successfully", device_id);
         Ok(())

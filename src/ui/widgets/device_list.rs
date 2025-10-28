@@ -16,12 +16,20 @@ pub fn render<'a>(
         .iter()
         .enumerate()
         .map(|(i, device)| {
-            let status_emoji = if device.online { Emoji::POWER_ON } else { Emoji::POWER_OFF };
+            let status_emoji = if device.online {
+                Emoji::POWER_ON
+            } else {
+                Emoji::POWER_OFF
+            };
 
             let device_emoji = Emoji::LIGHT;
 
             // Multi-select indicator
-            let select_indicator = if selected_devices.contains(&i) { "[✓] " } else { "[ ] " };
+            let select_indicator = if selected_devices.contains(&i) {
+                "[✓] "
+            } else {
+                "[ ] "
+            };
 
             let content = Line::from(vec![
                 Span::raw(select_indicator),

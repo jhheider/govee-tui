@@ -8,6 +8,7 @@ pub enum ViewMode {
     Brightness,
     ColorPicker,
     Search,
+    Help,
 }
 
 pub struct AppState {
@@ -54,6 +55,10 @@ impl AppState {
         self.view_mode = ViewMode::Search;
     }
 
+    pub fn enter_help(&mut self) {
+        self.view_mode = ViewMode::Help;
+    }
+
     pub fn exit_to_list(&mut self) {
         self.view_mode = ViewMode::List;
         self.brightness_control = None;
@@ -68,7 +73,11 @@ impl AppState {
     }
 
     pub fn toggle_selection(&mut self) {
-        if let Some(pos) = self.selected_devices.iter().position(|&i| i == self.selected_index) {
+        if let Some(pos) = self
+            .selected_devices
+            .iter()
+            .position(|&i| i == self.selected_index)
+        {
             self.selected_devices.remove(pos);
         } else {
             self.selected_devices.push(self.selected_index);

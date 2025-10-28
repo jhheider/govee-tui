@@ -11,6 +11,7 @@ impl App {
             ViewMode::Brightness => self.handle_brightness_keys(key, modifiers),
             ViewMode::ColorPicker => self.handle_color_picker_keys(key, modifiers),
             ViewMode::Search => self.handle_search_keys(key, modifiers),
+            ViewMode::Help => self.handle_help_keys(key, modifiers),
         }
     }
 
@@ -40,6 +41,9 @@ impl App {
             (KeyCode::Char('x'), _) => {
                 self.state.clear_selections();
             }
+            (KeyCode::Char('?'), _) => {
+                self.state.enter_help();
+            }
             _ => {}
         }
     }
@@ -50,8 +54,12 @@ impl App {
                 self.state.exit_to_list();
             }
             (KeyCode::Char('b'), _) => {
-                let current =
-                    self.state.device_state.as_ref().and_then(|s| s.brightness).unwrap_or(50);
+                let current = self
+                    .state
+                    .device_state
+                    .as_ref()
+                    .and_then(|s| s.brightness)
+                    .unwrap_or(50);
                 self.state.enter_brightness_control(current);
             }
             (KeyCode::Char('c'), _) => {
@@ -152,5 +160,10 @@ impl App {
             }
             _ => {}
         }
+    }
+
+    fn handle_help_keys(&mut self, _key: KeyCode, _modifiers: KeyModifiers) {
+        // Any key exits help
+        self.state.exit_to_list();
     }
 }

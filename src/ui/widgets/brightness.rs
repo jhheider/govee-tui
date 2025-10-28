@@ -13,7 +13,9 @@ pub struct BrightnessControl {
 
 impl BrightnessControl {
     pub fn new(value: u8) -> Self {
-        Self { value: value.min(100) }
+        Self {
+            value: value.min(100),
+        }
     }
 
     pub fn adjust(&mut self, delta: i16) {
@@ -30,7 +32,11 @@ pub fn render(brightness: &BrightnessControl, theme: &Theme, frame: &mut Frame) 
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(3), Constraint::Length(6), Constraint::Min(0)])
+        .constraints([
+            Constraint::Length(3),
+            Constraint::Length(6),
+            Constraint::Min(0),
+        ])
         .split(area);
 
     // Title

@@ -152,7 +152,10 @@ fn init_logging(verbose: bool) -> Result<()> {
     if verbose {
         // Verbose mode: log everything to stderr
         let filter = EnvFilter::new("govee_tui=debug,info");
-        tracing_subscriber::registry().with(filter).with(tracing_subscriber::fmt::layer()).init();
+        tracing_subscriber::registry()
+            .with(filter)
+            .with(tracing_subscriber::fmt::layer())
+            .init();
     } else {
         // Non-verbose: suppress all logging (TUI mode should be clean)
         let filter = EnvFilter::new("off");

@@ -567,6 +567,7 @@ dependencies = [
  "clap",
  "crossterm",
  "dirs",
+ "futures",
  "govee-api",
  "ratatui",
  "rusqlite",

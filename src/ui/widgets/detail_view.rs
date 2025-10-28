@@ -23,9 +23,14 @@ pub fn render(device: &Device, state: Option<&DeviceState>, theme: &Theme, frame
         .split(area);
 
     // Device header
-    let header = Paragraph::new(format!("{} {} ({})", Emoji::LIGHT, device.name, device.model))
-        .style(theme.title)
-        .block(Block::default().borders(Borders::ALL).style(theme.border));
+    let header = Paragraph::new(format!(
+        "{} {} ({})",
+        Emoji::LIGHT,
+        device.name,
+        device.model
+    ))
+    .style(theme.title)
+    .block(Block::default().borders(Borders::ALL).style(theme.border));
     frame.render_widget(header, chunks[0]);
 
     // Power and basic info
@@ -40,13 +45,23 @@ pub fn render(device: &Device, state: Option<&DeviceState>, theme: &Theme, frame
     };
 
     let info = Paragraph::new(vec![
-        Line::from(vec![Span::raw("Device ID: "), Span::styled(&device.id, theme.dim)]),
-        Line::from(vec![Span::raw("Power: "), Span::styled(&power_status, theme.text)]),
+        Line::from(vec![
+            Span::raw("Device ID: "),
+            Span::styled(&device.id, theme.dim),
+        ]),
+        Line::from(vec![
+            Span::raw("Power: "),
+            Span::styled(&power_status, theme.text),
+        ]),
         Line::from(vec![
             Span::raw("Controllable: "),
             Span::styled(
                 if device.controllable { "Yes" } else { "No" },
-                if device.controllable { theme.success } else { theme.dim },
+                if device.controllable {
+                    theme.success
+                } else {
+                    theme.dim
+                },
             ),
         ]),
     ])
@@ -70,7 +85,9 @@ pub fn render(device: &Device, state: Option<&DeviceState>, theme: &Theme, frame
     if let Some(s) = state {
         let mut lines = vec![];
         if let Some(color) = s.color {
-            lines.push(Line::from(theme::color_indicator(color.r, color.g, color.b)));
+            lines.push(Line::from(theme::color_indicator(
+                color.r, color.g, color.b,
+            )));
         }
         if let Some(temp) = s.color_temp {
             lines.push(Line::from(theme::temp_indicator(temp)));

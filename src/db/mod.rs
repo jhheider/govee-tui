@@ -51,7 +51,9 @@ impl Database {
 
     #[allow(dead_code)]
     pub fn get_devices(&self) -> Result<Vec<(String, String, String)>> {
-        let mut stmt = self.conn.prepare("SELECT id, name, model FROM devices ORDER BY name")?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id, name, model FROM devices ORDER BY name")?;
 
         let devices = stmt
             .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?

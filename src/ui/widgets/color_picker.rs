@@ -16,7 +16,12 @@ pub struct ColorPicker {
 
 impl ColorPicker {
     pub fn new(r: u8, g: u8, b: u8) -> Self {
-        Self { r, g, b, selected_channel: 0 }
+        Self {
+            r,
+            g,
+            b,
+            selected_channel: 0,
+        }
     }
 
     pub fn adjust(&mut self, delta: i16) {
@@ -35,8 +40,11 @@ impl ColorPicker {
     }
 
     pub fn prev_channel(&mut self) {
-        self.selected_channel =
-            if self.selected_channel == 0 { 2 } else { self.selected_channel - 1 };
+        self.selected_channel = if self.selected_channel == 0 {
+            2
+        } else {
+            self.selected_channel - 1
+        };
     }
 }
 
@@ -65,15 +73,30 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
             "Current Color: {}",
             crate::ui::theme::color_indicator(picker.r, picker.g, picker.b)
         )),
-        Line::from(format!("Hex: #{:02X}{:02X}{:02X}", picker.r, picker.g, picker.b)),
+        Line::from(format!(
+            "Hex: #{:02X}{:02X}{:02X}",
+            picker.r, picker.g, picker.b
+        )),
     ])
     .block(Block::default().borders(Borders::ALL).title("Preview"));
     frame.render_widget(preview, chunks[1]);
 
     // RGB sliders
-    let r_style = if picker.selected_channel == 0 { theme.highlight } else { theme.text };
-    let g_style = if picker.selected_channel == 1 { theme.highlight } else { theme.text };
-    let b_style = if picker.selected_channel == 2 { theme.highlight } else { theme.text };
+    let r_style = if picker.selected_channel == 0 {
+        theme.highlight
+    } else {
+        theme.text
+    };
+    let g_style = if picker.selected_channel == 1 {
+        theme.highlight
+    } else {
+        theme.text
+    };
+    let b_style = if picker.selected_channel == 2 {
+        theme.highlight
+    } else {
+        theme.text
+    };
 
     let sliders = Paragraph::new(vec![
         Line::from(vec![

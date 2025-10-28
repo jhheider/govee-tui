@@ -1,7 +1,8 @@
-use anyhow::Result;
+use tokio::sync::mpsc;
 
 use crate::{api, config, db};
 
+use super::async_ops::{AsyncCommand, AsyncResponse};
 use super::theme::Theme;
 use super::view_state::AppState;
 
@@ -15,10 +16,15 @@ pub struct App {
     pub state: AppState,
     pub should_quit: bool,
     pub needs_refresh: bool,
+    pub cmd_tx: mpsc::UnboundedSender<AsyncCommand>,
+    pub resp_rx: mpsc::UnboundedReceiver<AsyncResponse>,
+    pub loading: bool,
 }
 
 impl App {
     pub fn new(client: api::Client, db: db::Database, config: config::Config) -> Self {
+        let (cmd_tx, resp_rx) = super::async_ops::spawn_worker(client.clone());
+
         Self {
             client,
             db,
@@ -28,35 +34,28 @@ impl App {
             state: AppState::new(),
             should_quit: false,
             needs_refresh: false,
+            cmd_tx,
+            resp_rx,
+            loading: false,
         }
     }
 
-    pub async fn refresh_devices(&mut self) -> Result<()> {
-        self.devices = self.client.get_devices().await?;
-
-        for device in &self.devices {
-            self.db.save_device(&device.id, &device.name, &device.model)?;
-        }
-
-        Ok(())
+    pub fn request_refresh_devices(&mut self) {
+        self.loading = true;
+        let _ = self.cmd_tx.send(AsyncCommand::RefreshDevices);
     }
 
-    pub async fn load_device_state(&mut self) -> Result<()> {
+    pub fn request_load_device_state(&mut self) {
         if self.devices.is_empty() || self.state.selected_index >= self.devices.len() {
-            return Ok(());
+            return;
         }
 
         let device = &self.devices[self.state.selected_index];
-        match self.client.get_device_state(&device.id, &device.model).await {
-            Ok(state) => {
-                self.state.device_state = Some(state);
-                Ok(())
-            }
-            Err(e) => {
-                self.state.status_message = Some(format!("Failed to load state: {}", e));
-                Ok(())
-            }
-        }
+        self.loading = true;
+        let _ = self.cmd_tx.send(AsyncCommand::LoadDeviceState {
+            device_id: device.id.clone(),
+            model: device.model.clone(),
+        });
     }
 
     pub fn selected_device(&self) -> Option<&api::Device> {
@@ -74,47 +73,102 @@ impl App {
         self.state.selected_index = new_index;
     }
 
-    pub async fn apply_brightness(&mut self, value: u8) -> Result<()> {
+    pub fn request_apply_brightness(&mut self, value: u8) {
         let indices = self.state.get_selected_or_current();
+        let device_ids: Vec<(String, String)> = indices
+            .iter()
+            .filter_map(|&idx| self.devices.get(idx))
+            .map(|d| (d.id.clone(), d.model.clone()))
+            .collect();
 
-        for &idx in &indices {
-            if let Some(device) = self.devices.get(idx) {
-                let cmd = api::Command::brightness(value);
-                self.client.control_device(&device.id, &device.model, cmd).await?;
-            }
+        if !device_ids.is_empty() {
+            self.loading = true;
+            let _ = self
+                .cmd_tx
+                .send(AsyncCommand::ApplyBrightness { device_ids, value });
         }
-
-        self.state.status_message = Some(format!("Brightness set to {}%", value));
-        Ok(())
     }
 
-    pub async fn apply_color(&mut self, r: u8, g: u8, b: u8) -> Result<()> {
+    pub fn request_apply_color(&mut self, r: u8, g: u8, b: u8) {
         let indices = self.state.get_selected_or_current();
+        let device_ids: Vec<(String, String)> = indices
+            .iter()
+            .filter_map(|&idx| self.devices.get(idx))
+            .map(|d| (d.id.clone(), d.model.clone()))
+            .collect();
 
-        for &idx in &indices {
-            if let Some(device) = self.devices.get(idx) {
-                let cmd = api::Command::color(r, g, b);
-                self.client.control_device(&device.id, &device.model, cmd).await?;
-            }
+        if !device_ids.is_empty() {
+            self.loading = true;
+            let _ = self.cmd_tx.send(AsyncCommand::ApplyColor {
+                device_ids,
+                r,
+                g,
+                b,
+            });
         }
-
-        self.state.status_message = Some(format!("Color set to RGB({},{},{})", r, g, b));
-        Ok(())
     }
 
     #[allow(dead_code)]
-    pub async fn toggle_power(&mut self) -> Result<()> {
+    pub fn request_toggle_power(&mut self, state: bool) {
         let indices = self.state.get_selected_or_current();
-        let new_state = !self.state.device_state.as_ref().map(|s| s.power).unwrap_or(false);
+        let device_ids: Vec<(String, String)> = indices
+            .iter()
+            .filter_map(|&idx| self.devices.get(idx))
+            .map(|d| (d.id.clone(), d.model.clone()))
+            .collect();
 
-        for &idx in &indices {
-            if let Some(device) = self.devices.get(idx) {
-                let cmd = api::Command::turn(new_state);
-                self.client.control_device(&device.id, &device.model, cmd).await?;
+        if !device_ids.is_empty() {
+            self.loading = true;
+            let _ = self
+                .cmd_tx
+                .send(AsyncCommand::TogglePower { device_ids, state });
+        }
+    }
+
+    pub fn handle_async_response(&mut self, response: AsyncResponse) {
+        self.loading = false;
+
+        match response {
+            AsyncResponse::DevicesRefreshed(Ok(devices)) => {
+                self.devices = devices;
+                for device in &self.devices {
+                    let _ = self.db.save_device(&device.id, &device.name, &device.model);
+                }
+                self.state.status_message =
+                    Some(format!("Refreshed {} devices", self.devices.len()));
+            }
+            AsyncResponse::DevicesRefreshed(Err(e)) => {
+                self.state.status_message = Some(format!("Failed to refresh: {}", e));
+            }
+
+            AsyncResponse::DeviceStateLoaded(Ok(state)) => {
+                self.state.device_state = Some(state);
+            }
+            AsyncResponse::DeviceStateLoaded(Err(e)) => {
+                self.state.status_message = Some(format!("Failed to load state: {}", e));
+            }
+
+            AsyncResponse::BrightnessApplied(Ok(value)) => {
+                self.state.status_message = Some(format!("Brightness set to {}%", value));
+            }
+            AsyncResponse::BrightnessApplied(Err(e)) => {
+                self.state.status_message = Some(format!("Failed to set brightness: {}", e));
+            }
+
+            AsyncResponse::ColorApplied(Ok((r, g, b))) => {
+                self.state.status_message = Some(format!("Color set to RGB({},{},{})", r, g, b));
+            }
+            AsyncResponse::ColorApplied(Err(e)) => {
+                self.state.status_message = Some(format!("Failed to set color: {}", e));
+            }
+
+            AsyncResponse::PowerToggled(Ok(state)) => {
+                self.state.status_message =
+                    Some(format!("Power {}", if state { "ON" } else { "OFF" }));
+            }
+            AsyncResponse::PowerToggled(Err(e)) => {
+                self.state.status_message = Some(format!("Failed to toggle power: {}", e));
             }
         }
-
-        self.state.status_message = Some(format!("Power {}", if new_state { "ON" } else { "OFF" }));
-        Ok(())
     }
 }
