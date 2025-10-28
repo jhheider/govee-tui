@@ -200,12 +200,12 @@ impl GoveeClient {
             )));
         }
 
-        let api_response: ApiResponse<serde_json::Value> = response.json().await?;
+        let control_response: ControlResponse = response.json().await?;
 
-        if api_response.code != 0 && api_response.code != 200 {
+        if control_response.code != 0 && control_response.code != 200 {
             return Err(Error::Api {
-                code: api_response.code,
-                message: api_response.message,
+                code: control_response.code,
+                message: control_response.msg,
             });
         }
 

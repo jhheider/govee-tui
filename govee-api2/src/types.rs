@@ -211,6 +211,17 @@ pub(crate) struct DeviceStateResponse {
     pub payload: DeviceStatePayload,
 }
 
+// Device control response has "msg" and "capability" at top level
+#[derive(Debug, Deserialize)]
+pub(crate) struct ControlResponse {
+    #[serde(default)]
+    pub code: i32,
+    #[serde(default)]
+    pub msg: String,
+    #[serde(default)]
+    pub capability: Option<serde_json::Value>,
+}
+
 #[derive(Debug, Serialize)]
 pub(crate) struct ControlRequest {
     #[serde(rename = "requestId")]
