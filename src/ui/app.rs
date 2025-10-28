@@ -150,22 +150,23 @@ impl App {
                 if let Some(state) = &mut self.state.device_state {
                     state.brightness = Some(value);
                 }
-                // Still refresh from API in background
-                self.request_load_device_state();
+                // Don't refresh immediately - would overwrite optimistic update
+                // User can press 'r' to manually refresh if needed
             }
             AsyncResponse::BrightnessApplied(Err(e)) => {
                 self.state.error_message = Some(format!("Failed to set brightness: {}", e));
             }
 
             AsyncResponse::ColorApplied(Ok((r, g, b))) => {
-                self.state.status_message = Some(format!("Color set to RGB({},{},{})", r, g, b));
+                // Get closest color name
+                let color_name = color_name::css::Color::similar([r, g, b]);
+                self.state.status_message = Some(format!("Color set to {} RGB({},{},{})", color_name, r, g, b));
                 self.state.error_message = None;
                 // Optimistically update local state for instant feedback
                 if let Some(state) = &mut self.state.device_state {
                     state.color = Some(crate::api::models::RgbColor::new(r, g, b));
                 }
-                // Still refresh from API in background
-                self.request_load_device_state();
+                // Don't refresh immediately - would overwrite optimistic update
             }
             AsyncResponse::ColorApplied(Err(e)) => {
                 self.state.error_message = Some(format!("Failed to set color: {}", e));
@@ -179,8 +180,7 @@ impl App {
                 if let Some(device_state) = &mut self.state.device_state {
                     device_state.power = state;
                 }
-                // Still refresh from API in background
-                self.request_load_device_state();
+                // Don't refresh immediately - would overwrite optimistic update
             }
             AsyncResponse::PowerToggled(Err(e)) => {
                 self.state.error_message = Some(format!("Failed to toggle power: {}", e));

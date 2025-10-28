@@ -4,6 +4,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
+use color_name::css::Color as ColorName;
 
 use crate::ui::theme::{Emoji, Theme};
 
@@ -55,10 +56,10 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),
-            Constraint::Length(8),
-            Constraint::Length(10),
-            Constraint::Min(0),
+            Constraint::Length(3),   // Title
+            Constraint::Length(10),  // Preview (now 4 lines + borders)
+            Constraint::Length(9),   // RGB sliders
+            Constraint::Min(0),      // Help
         ])
         .split(area);
 
@@ -68,11 +69,21 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
         .block(Block::default().borders(Borders::ALL));
     frame.render_widget(title, chunks[0]);
 
-    // Color preview
+    // Color preview with name lookup
+    let color_name = ColorName::similar([picker.r, picker.g, picker.b]);
+
     let preview = Paragraph::new(vec![
         Line::from(format!(
             "Current Color: {}",
             crate::ui::theme::color_indicator(picker.r, picker.g, picker.b)
+        )),
+        Line::from(format!(
+            "Name: {} (closest match)",
+            color_name
+        )),
+        Line::from(format!(
+            "RGB: ({}, {}, {})",
+            picker.r, picker.g, picker.b
         )),
         Line::from(format!(
             "Hex: #{:02X}{:02X}{:02X}",
