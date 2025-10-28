@@ -112,49 +112,73 @@ impl App {
                 self.state.close_modal();
             }
             Modal::ColorPicker(_) => {
+                use crate::ui::widgets::color_picker::ColorPickerMode;
+
                 match key {
                     KeyCode::Esc => {
                         self.state.close_modal();
                     }
-                    KeyCode::Enter => {
-                        if let Modal::ColorPicker(picker) = &self.state.modal {
-                            self.request_apply_color(picker.r, picker.g, picker.b);
+
+                    // Tab toggles between RGB and Browser modes
+                    KeyCode::Tab => {
+                        if let Modal::ColorPicker(ref mut picker) = self.state.modal {
+                            picker.toggle_mode();
                         }
-                        self.state.close_modal();
                     }
-                    // Up/Down to switch channel
+
+                    // Enter behavior depends on mode
+                    KeyCode::Enter => {
+                        if let Modal::ColorPicker(ref mut picker) = self.state.modal {
+                            // In browser mode, select the color first
+                            if picker.mode == ColorPickerMode::Browser {
+                                picker.select_current_color();
+                            }
+
+                            // Extract RGB values before borrowing self mutably
+                            let (r, g, b) = (picker.r, picker.g, picker.b);
+
+                            // Now we can borrow self mutably
+                            self.request_apply_color(r, g, b);
+                            self.state.close_modal();
+                        }
+                    }
+
+                    // Up/Down behavior depends on mode
                     KeyCode::Up => {
                         if let Modal::ColorPicker(ref mut picker) = self.state.modal {
-                            picker.prev_channel();
+                            match picker.mode {
+                                ColorPickerMode::Rgb => picker.prev_channel(),
+                                ColorPickerMode::Browser => picker.prev_color(),
+                            }
                         }
                     }
                     KeyCode::Down => {
                         if let Modal::ColorPicker(ref mut picker) = self.state.modal {
-                            picker.next_channel();
+                            match picker.mode {
+                                ColorPickerMode::Rgb => picker.next_channel(),
+                                ColorPickerMode::Browser => picker.next_color(),
+                            }
                         }
                     }
-                    // Left/Right to adjust value
+
+                    // Left/Right behavior depends on mode
                     KeyCode::Left => {
                         if let Modal::ColorPicker(ref mut picker) = self.state.modal {
-                            picker.adjust(-10);
+                            match picker.mode {
+                                ColorPickerMode::Rgb => picker.adjust(-10),
+                                ColorPickerMode::Browser => picker.prev_group(),
+                            }
                         }
                     }
                     KeyCode::Right => {
                         if let Modal::ColorPicker(ref mut picker) = self.state.modal {
-                            picker.adjust(10);
+                            match picker.mode {
+                                ColorPickerMode::Rgb => picker.adjust(10),
+                                ColorPickerMode::Browser => picker.next_group(),
+                            }
                         }
                     }
-                    // Tab still works as alternative
-                    KeyCode::Tab => {
-                        if let Modal::ColorPicker(ref mut picker) = self.state.modal {
-                            picker.next_channel();
-                        }
-                    }
-                    KeyCode::BackTab => {
-                        if let Modal::ColorPicker(ref mut picker) = self.state.modal {
-                            picker.prev_channel();
-                        }
-                    }
+
                     _ => {}
                 }
             }
