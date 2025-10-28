@@ -146,7 +146,11 @@ impl App {
             AsyncResponse::BrightnessApplied(Ok(value)) => {
                 self.state.status_message = Some(format!("Brightness set to {}%", value));
                 self.state.error_message = None;
-                // Refresh state after change
+                // Optimistically update local state for instant feedback
+                if let Some(state) = &mut self.state.device_state {
+                    state.brightness = Some(value);
+                }
+                // Still refresh from API in background
                 self.request_load_device_state();
             }
             AsyncResponse::BrightnessApplied(Err(e)) => {
@@ -156,7 +160,11 @@ impl App {
             AsyncResponse::ColorApplied(Ok((r, g, b))) => {
                 self.state.status_message = Some(format!("Color set to RGB({},{},{})", r, g, b));
                 self.state.error_message = None;
-                // Refresh state after change
+                // Optimistically update local state for instant feedback
+                if let Some(state) = &mut self.state.device_state {
+                    state.color = Some(crate::api::models::RgbColor::new(r, g, b));
+                }
+                // Still refresh from API in background
                 self.request_load_device_state();
             }
             AsyncResponse::ColorApplied(Err(e)) => {
@@ -167,7 +175,11 @@ impl App {
                 self.state.status_message =
                     Some(format!("Power {}", if state { "ON" } else { "OFF" }));
                 self.state.error_message = None;
-                // Refresh state after change
+                // Optimistically update local state for instant feedback
+                if let Some(device_state) = &mut self.state.device_state {
+                    device_state.power = state;
+                }
+                // Still refresh from API in background
                 self.request_load_device_state();
             }
             AsyncResponse::PowerToggled(Err(e)) => {
