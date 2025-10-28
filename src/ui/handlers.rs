@@ -6,9 +6,7 @@ use super::view_state::ViewMode;
 impl App {
     pub fn handle_key(&mut self, key: KeyCode, modifiers: KeyModifiers) {
         match &self.state.view_mode {
-            ViewMode::List => self.handle_list_keys(key, modifiers),
-            ViewMode::Panel => self.handle_panel_keys(key, modifiers),
-            ViewMode::Detail => self.handle_detail_keys(key, modifiers),
+            ViewMode::List | ViewMode::Detail => self.handle_main_keys(key, modifiers),
             ViewMode::Brightness => self.handle_brightness_keys(key, modifiers),
             ViewMode::ColorPicker => self.handle_color_picker_keys(key, modifiers),
             ViewMode::Search => self.handle_search_keys(key, modifiers),
@@ -16,7 +14,7 @@ impl App {
         }
     }
 
-    fn handle_list_keys(&mut self, key: KeyCode, modifiers: KeyModifiers) {
+    fn handle_main_keys(&mut self, key: KeyCode, modifiers: KeyModifiers) {
         match (key, modifiers) {
             (KeyCode::Char('q'), _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
                 self.should_quit = true;
@@ -45,53 +43,12 @@ impl App {
             (KeyCode::Char('?'), _) => {
                 self.state.enter_help();
             }
-            (KeyCode::Tab, _) => {
-                self.state.enter_panel_view();
-            }
-            _ => {}
-        }
-    }
-
-    fn handle_panel_keys(&mut self, key: KeyCode, modifiers: KeyModifiers) {
-        match (key, modifiers) {
-            (KeyCode::Char('q'), _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
-                self.should_quit = true;
-            }
-            (KeyCode::Char('r'), _) => {
-                self.needs_refresh = true;
-            }
-            (KeyCode::Up, KeyModifiers::NONE) | (KeyCode::Char('k'), _) => {
-                self.move_selection(-1);
-            }
-            (KeyCode::Down, KeyModifiers::NONE) | (KeyCode::Char('j'), _) => {
-                self.move_selection(1);
-            }
-            (KeyCode::Enter, _) => {
-                self.state.enter_detail_view();
-            }
             (KeyCode::Char(' '), _) => {
                 // Toggle power for selected device
-                if let Some(device_state) = self.state.all_device_states.get(self.state.selected_index) {
-                    if let Some(state) = device_state {
-                        let new_power = !state.power;
-                        self.request_toggle_power(new_power);
-                    }
+                if let Some(state) = &self.state.device_state {
+                    let new_power = !state.power;
+                    self.request_toggle_power(new_power);
                 }
-            }
-            (KeyCode::Tab, _) => {
-                self.state.exit_to_list();
-            }
-            (KeyCode::Char('?'), _) => {
-                self.state.enter_help();
-            }
-            _ => {}
-        }
-    }
-
-    fn handle_detail_keys(&mut self, key: KeyCode, modifiers: KeyModifiers) {
-        match (key, modifiers) {
-            (KeyCode::Esc, _) | (KeyCode::Char('q'), _) => {
-                self.state.exit_to_list();
             }
             // Direct brightness control with arrows (10% default, 5% fine-grained)
             (KeyCode::Up, KeyModifiers::SHIFT) | (KeyCode::Char('k'), KeyModifiers::SHIFT) => {

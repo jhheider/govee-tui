@@ -36,14 +36,22 @@ impl NewApiClient {
             anyhow::bail!("API request failed ({}): {}", status, body);
         }
 
-        let data: NewDeviceListResponse = response.json().await.context("Failed to parse JSON")?;
+        // Get raw text first to debug
+        let text = response.text().await.context("Failed to read response body")?;
+
+        // Try to parse the response
+        let data: NewDeviceListResponse = serde_json::from_str(&text)
+            .with_context(|| format!("Failed to parse JSON response. First 200 chars: {}",
+                &text.chars().take(200).collect::<String>()))?;
         Ok(data)
     }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct NewDeviceListResponse {
+    #[serde(default)]
     pub code: i32,
+    #[serde(default)]
     pub message: String,
     pub data: Vec<NewDevice>,
 }

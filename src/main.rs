@@ -77,7 +77,7 @@ async fn main() -> Result<()> {
         .config
         .map(std::path::PathBuf::from)
         .or_else(|| dirs::config_dir().map(|d| d.join("govee-tui").join("config.toml")))
-        .unwrap();
+        .unwrap_or_else(|| std::path::PathBuf::from("./config.toml"));
 
     // Validate API key
     if config.api.key.is_empty() || config.api.key == "YOUR_API_KEY_HERE" {

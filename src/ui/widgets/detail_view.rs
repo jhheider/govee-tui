@@ -1,5 +1,5 @@
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
     Frame,
@@ -8,8 +8,7 @@ use ratatui::{
 use crate::api::{models::DeviceState, Device};
 use crate::ui::theme::{self, Emoji, Theme};
 
-pub fn render(device: &Device, state: Option<&DeviceState>, theme: &Theme, frame: &mut Frame) {
-    let area = frame.area();
+pub fn render(device: &Device, state: Option<&DeviceState>, theme: &Theme, frame: &mut Frame, area: Rect) {
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)

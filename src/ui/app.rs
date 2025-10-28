@@ -136,16 +136,18 @@ impl App {
                 }
                 self.state.status_message =
                     Some(format!("Refreshed {} devices", self.devices.len()));
+                self.state.error_message = None;
             }
             AsyncResponse::DevicesRefreshed(Err(e)) => {
-                self.state.status_message = Some(format!("Failed to refresh: {}", e));
+                self.state.error_message = Some(format!("Failed to refresh devices: {}", e));
             }
 
             AsyncResponse::DeviceStateLoaded(Ok(state)) => {
                 self.state.device_state = Some(state);
+                self.state.error_message = None;
             }
             AsyncResponse::DeviceStateLoaded(Err(e)) => {
-                self.state.status_message = Some(format!("Failed to load state: {}", e));
+                self.state.error_message = Some(format!("Failed to load device state: {}", e));
             }
 
             AsyncResponse::AllDeviceStatesLoaded(states) => {
@@ -154,24 +156,27 @@ impl App {
 
             AsyncResponse::BrightnessApplied(Ok(value)) => {
                 self.state.status_message = Some(format!("Brightness set to {}%", value));
+                self.state.error_message = None;
             }
             AsyncResponse::BrightnessApplied(Err(e)) => {
-                self.state.status_message = Some(format!("Failed to set brightness: {}", e));
+                self.state.error_message = Some(format!("Failed to set brightness: {}", e));
             }
 
             AsyncResponse::ColorApplied(Ok((r, g, b))) => {
                 self.state.status_message = Some(format!("Color set to RGB({},{},{})", r, g, b));
+                self.state.error_message = None;
             }
             AsyncResponse::ColorApplied(Err(e)) => {
-                self.state.status_message = Some(format!("Failed to set color: {}", e));
+                self.state.error_message = Some(format!("Failed to set color: {}", e));
             }
 
             AsyncResponse::PowerToggled(Ok(state)) => {
                 self.state.status_message =
                     Some(format!("Power {}", if state { "ON" } else { "OFF" }));
+                self.state.error_message = None;
             }
             AsyncResponse::PowerToggled(Err(e)) => {
-                self.state.status_message = Some(format!("Failed to toggle power: {}", e));
+                self.state.error_message = Some(format!("Failed to toggle power: {}", e));
             }
         }
     }

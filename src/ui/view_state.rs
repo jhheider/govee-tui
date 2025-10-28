@@ -3,13 +3,12 @@ use crate::ui::widgets::{brightness::BrightnessControl, color_picker::ColorPicke
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ViewMode {
-    List,
-    Panel, // htop-style panel view
-    Detail,
-    Brightness,
-    ColorPicker,
-    Search,
-    Help,
+    List,       // Normal mode - multi-pane layout visible
+    Detail,     // Detail pane has focus (but still visible)
+    Brightness, // Brightness overlay
+    ColorPicker, // Color picker overlay
+    Search,     // Search overlay
+    Help,       // Help overlay
 }
 
 pub struct AppState {
@@ -22,6 +21,7 @@ pub struct AppState {
     pub brightness_control: Option<BrightnessControl>,
     pub color_picker: Option<ColorPicker>,
     pub status_message: Option<String>,
+    pub error_message: Option<String>,
 }
 
 impl AppState {
@@ -36,11 +36,8 @@ impl AppState {
             brightness_control: None,
             color_picker: None,
             status_message: None,
+            error_message: None,
         }
-    }
-
-    pub fn enter_panel_view(&mut self) {
-        self.view_mode = ViewMode::Panel;
     }
 
     pub fn enter_detail_view(&mut self) {

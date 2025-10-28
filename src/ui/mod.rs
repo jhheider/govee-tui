@@ -14,6 +14,7 @@ use crate::{api, config, db};
 pub mod app;
 pub mod async_ops;
 pub mod handlers;
+pub mod layout;
 pub mod renderer;
 pub mod theme;
 pub mod view_state;
@@ -73,14 +74,8 @@ async fn run_loop(
 
                 // Handle async actions (non-blocking requests)
                 match &app.state.view_mode {
-                    ViewMode::Panel => {
-                        // Load all device states if entering panel view
-                        if app.state.all_device_states.is_empty() {
-                            app.request_load_all_device_states();
-                        }
-                    }
-                    ViewMode::Detail => {
-                        // Load state if entering detail view
+                    ViewMode::List | ViewMode::Detail => {
+                        // Load device state if we don't have it
                         if app.state.device_state.is_none() {
                             app.request_load_device_state();
                         }
