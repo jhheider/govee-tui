@@ -56,22 +56,17 @@ impl GoveeClient {
 
     /// Get the current state of a device
     pub async fn get_device_state(&self, device_id: &str, sku: &str) -> Result<DeviceState> {
-        let url = format!("{}/router/api/v1/device/state", API_BASE);
-
-        let payload = json!({
-            "requestId": generate_request_id(),
-            "payload": {
-                "sku": sku,
-                "device": device_id
-            }
-        });
+        // The API uses GET with query parameters, not POST with JSON body
+        let url = format!(
+            "{}/router/api/v1/device/state?device={}&model={}",
+            API_BASE, device_id, sku
+        );
 
         let response = self
             .client
-            .post(&url)
+            .get(&url)
             .header("Govee-API-Key", &self.api_key)
             .header("Content-Type", "application/json")
-            .json(&payload)
             .send()
             .await?;
 
@@ -84,7 +79,7 @@ impl GoveeClient {
             )));
         }
 
-        let api_response: ApiResponse<DeviceState> = response.json().await?;
+        let api_response: ApiResponse<DeviceStateResponse> = response.json().await?;
 
         if api_response.code != 0 && api_response.code != 200 {
             return Err(Error::Api {
@@ -93,7 +88,7 @@ impl GoveeClient {
             });
         }
 
-        Ok(api_response.data)
+        Ok(DeviceState::from_capabilities(api_response.data.capabilities))
     }
 
     /// Turn a device on

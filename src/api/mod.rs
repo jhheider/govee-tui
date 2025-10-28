@@ -88,8 +88,8 @@ impl Client {
 
         // Convert govee_api2::DeviceState to our DeviceState
         Ok(models::DeviceState {
-            online: state.online,
-            power: state.power_state.map(|p| p.is_on()).unwrap_or(false),
+            online: true, // If we got a response, device is online
+            power: state.power,
             brightness: state.brightness.map(|b| b as u8),
             color: state.color.map(|c| models::RgbColor::new(c.r, c.g, c.b)),
             color_temp: state.color_temperature_kelvin.map(|k| k as u16),

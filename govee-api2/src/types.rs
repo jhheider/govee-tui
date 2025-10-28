@@ -71,14 +71,34 @@ pub struct Capability {
     pub parameters: serde_json::Value,
 }
 
-/// Device state information
+/// Raw device state response from API
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceState {
-    /// Power state
-    pub online: bool,
+pub struct DeviceStateResponse {
+    pub capabilities: Vec<CapabilityState>,
+}
 
+/// A capability state from the device
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityState {
+    #[serde(rename = "type")]
+    pub capability_type: String,
+    pub instance: String,
+    pub state: StateValue,
+}
+
+/// State value can be an int, object, or other JSON value
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum StateValue {
+    Int { value: i32 },
+    Object { value: serde_json::Value },
+}
+
+/// Parsed device state information (user-friendly)
+#[derive(Debug, Clone)]
+pub struct DeviceState {
     /// Power on/off
-    pub power_state: Option<PowerState>,
+    pub power: bool,
 
     /// Brightness (0-100)
     pub brightness: Option<i32>,
@@ -88,6 +108,51 @@ pub struct DeviceState {
 
     /// Color temperature in Kelvin
     pub color_temperature_kelvin: Option<i32>,
+}
+
+impl DeviceState {
+    /// Parse from raw capabilities array
+    pub fn from_capabilities(capabilities: Vec<CapabilityState>) -> Self {
+        let mut power = false;
+        let mut brightness = None;
+        let mut color = None;
+        let mut color_temperature_kelvin = None;
+
+        for cap in capabilities {
+            match cap.instance.as_str() {
+                "powerSwitch" => {
+                    if let StateValue::Int { value } = cap.state {
+                        power = value == 1;
+                    }
+                }
+                "brightness" => {
+                    if let StateValue::Int { value } = cap.state {
+                        brightness = Some(value);
+                    }
+                }
+                "colorRgb" => {
+                    if let StateValue::Object { value } = cap.state {
+                        if let Ok(rgb) = serde_json::from_value::<Color>(value) {
+                            color = Some(rgb);
+                        }
+                    }
+                }
+                "colorTemperatureK" | "colorTem" => {
+                    if let StateValue::Int { value } = cap.state {
+                        color_temperature_kelvin = Some(value);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        Self {
+            power,
+            brightness,
+            color,
+            color_temperature_kelvin,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
