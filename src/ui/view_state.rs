@@ -1,107 +1,66 @@
 use crate::api::models::DeviceState;
 use crate::ui::widgets::{brightness::BrightnessControl, color_picker::ColorPicker};
+use super::focus::Focus;
 
+/// Modal overlays that can appear on top of the main view
 #[derive(Debug, Clone, PartialEq)]
-pub enum ViewMode {
-    List,       // Normal mode - multi-pane layout visible
-    Detail,     // Detail pane has focus (but still visible)
-    Brightness, // Brightness overlay
-    ColorPicker, // Color picker overlay
-    Search,     // Search overlay
-    Help,       // Help overlay
+pub enum Modal {
+    None,
+    Help,
+    Brightness(BrightnessControl),
+    ColorPicker(ColorPicker),
 }
 
+/// Complete application UI state
 pub struct AppState {
-    pub view_mode: ViewMode,
+    /// Which pane has focus (List or Detail)
+    pub focus: Focus,
+
+    /// Currently selected device index
     pub selected_index: usize,
-    pub selected_devices: Vec<usize>, // Multi-select indices
-    pub search_query: String,
+
+    /// Current device state (for detail pane)
     pub device_state: Option<DeviceState>,
-    pub all_device_states: Vec<Option<DeviceState>>, // For panel view
-    pub brightness_control: Option<BrightnessControl>,
-    pub color_picker: Option<ColorPicker>,
+
+    /// Active modal overlay
+    pub modal: Modal,
+
+    /// Status message (green, temporary)
     pub status_message: Option<String>,
+
+    /// Error message (red, persistent until cleared)
     pub error_message: Option<String>,
 }
 
 impl AppState {
     pub fn new() -> Self {
         Self {
-            view_mode: ViewMode::List,
+            focus: Focus::List,
             selected_index: 0,
-            selected_devices: Vec::new(),
-            search_query: String::new(),
             device_state: None,
-            all_device_states: Vec::new(),
-            brightness_control: None,
-            color_picker: None,
+            modal: Modal::None,
             status_message: None,
             error_message: None,
         }
     }
 
-    pub fn enter_detail_view(&mut self) {
-        self.view_mode = ViewMode::Detail;
+    /// Toggle focus between list and detail panes
+    pub fn toggle_focus(&mut self) {
+        self.focus = self.focus.toggle();
     }
 
-    pub fn enter_brightness_control(&mut self, current: u8) {
-        self.brightness_control = Some(BrightnessControl::new(current));
-        self.view_mode = ViewMode::Brightness;
+    /// Open help modal
+    pub fn open_help(&mut self) {
+        self.modal = Modal::Help;
     }
 
-    pub fn enter_color_picker(&mut self, r: u8, g: u8, b: u8) {
-        self.color_picker = Some(ColorPicker::new(r, g, b));
-        self.view_mode = ViewMode::ColorPicker;
+    /// Close any open modal
+    pub fn close_modal(&mut self) {
+        self.modal = Modal::None;
     }
 
-    pub fn enter_search(&mut self) {
-        self.search_query.clear();
-        self.view_mode = ViewMode::Search;
-    }
-
-    pub fn enter_help(&mut self) {
-        self.view_mode = ViewMode::Help;
-    }
-
-    pub fn exit_to_list(&mut self) {
-        self.view_mode = ViewMode::List;
-        self.brightness_control = None;
-        self.color_picker = None;
-        self.search_query.clear();
-    }
-
-    pub fn exit_to_detail(&mut self) {
-        self.view_mode = ViewMode::Detail;
-        self.brightness_control = None;
-        self.color_picker = None;
-    }
-
-    pub fn toggle_selection(&mut self) {
-        if let Some(pos) = self
-            .selected_devices
-            .iter()
-            .position(|&i| i == self.selected_index)
-        {
-            self.selected_devices.remove(pos);
-        } else {
-            self.selected_devices.push(self.selected_index);
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn is_selected(&self, index: usize) -> bool {
-        self.selected_devices.contains(&index)
-    }
-
-    pub fn clear_selections(&mut self) {
-        self.selected_devices.clear();
-    }
-
-    pub fn get_selected_or_current(&self) -> Vec<usize> {
-        if self.selected_devices.is_empty() {
-            vec![self.selected_index]
-        } else {
-            self.selected_devices.clone()
-        }
+    /// Check if a modal is currently open
+    pub fn has_modal(&self) -> bool {
+        self.modal != Modal::None
     }
 }

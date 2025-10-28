@@ -3,12 +3,12 @@ use ratatui::style::{Color, Modifier, Style};
 pub struct Theme {
     pub title: Style,
     pub border: Style,
+    pub border_focused: Style,  // Focused pane border
     pub highlight: Style,
     pub text: Style,
     pub success: Style,
     #[allow(dead_code)]
     pub warning: Style,
-    #[allow(dead_code)]
     pub error: Style,
     pub dim: Style,
 }
@@ -20,6 +20,9 @@ impl Theme {
                 .fg(Color::Cyan)
                 .add_modifier(Modifier::BOLD),
             border: Style::default().fg(Color::DarkGray),
+            border_focused: Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),  // Blue border for focused pane
             highlight: Style::default().fg(Color::Black).bg(Color::Cyan),
             text: Style::default().fg(Color::White),
             success: Style::default().fg(Color::Green),

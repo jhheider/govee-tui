@@ -71,36 +71,30 @@ impl App {
         let new_index =
             (self.state.selected_index as isize + delta).rem_euclid(len as isize) as usize;
         self.state.selected_index = new_index;
+        
+        // Clear device state when moving to a new device
+        self.state.device_state = None;
     }
 
     pub fn request_apply_brightness(&mut self, value: u8) {
-        let indices = self.state.get_selected_or_current();
-        let device_ids: Vec<(String, String)> = indices
-            .iter()
-            .filter_map(|&idx| self.devices.get(idx))
-            .map(|d| (d.id.clone(), d.model.clone()))
-            .collect();
-
-        if !device_ids.is_empty() {
+        if let Some(device) = self.selected_device() {
+            let device_id = device.id.clone();
+            let model = device.model.clone();
             self.loading = true;
-            let _ = self
-                .cmd_tx
-                .send(AsyncCommand::ApplyBrightness { device_ids, value });
+            let _ = self.cmd_tx.send(AsyncCommand::ApplyBrightness {
+                device_ids: vec![(device_id, model)],
+                value,
+            });
         }
     }
 
     pub fn request_apply_color(&mut self, r: u8, g: u8, b: u8) {
-        let indices = self.state.get_selected_or_current();
-        let device_ids: Vec<(String, String)> = indices
-            .iter()
-            .filter_map(|&idx| self.devices.get(idx))
-            .map(|d| (d.id.clone(), d.model.clone()))
-            .collect();
-
-        if !device_ids.is_empty() {
+        if let Some(device) = self.selected_device() {
+            let device_id = device.id.clone();
+            let model = device.model.clone();
             self.loading = true;
             let _ = self.cmd_tx.send(AsyncCommand::ApplyColor {
-                device_ids,
+                device_ids: vec![(device_id, model)],
                 r,
                 g,
                 b,
@@ -108,20 +102,15 @@ impl App {
         }
     }
 
-    #[allow(dead_code)]
     pub fn request_toggle_power(&mut self, state: bool) {
-        let indices = self.state.get_selected_or_current();
-        let device_ids: Vec<(String, String)> = indices
-            .iter()
-            .filter_map(|&idx| self.devices.get(idx))
-            .map(|d| (d.id.clone(), d.model.clone()))
-            .collect();
-
-        if !device_ids.is_empty() {
+        if let Some(device) = self.selected_device() {
+            let device_id = device.id.clone();
+            let model = device.model.clone();
             self.loading = true;
-            let _ = self
-                .cmd_tx
-                .send(AsyncCommand::TogglePower { device_ids, state });
+            let _ = self.cmd_tx.send(AsyncCommand::TogglePower {
+                device_ids: vec![(device_id, model)],
+                state,
+            });
         }
     }
 
@@ -150,13 +139,15 @@ impl App {
                 self.state.error_message = Some(format!("Failed to load device state: {}", e));
             }
 
-            AsyncResponse::AllDeviceStatesLoaded(states) => {
-                self.state.all_device_states = states;
+            AsyncResponse::AllDeviceStatesLoaded(_states) => {
+                // Not used anymore
             }
 
             AsyncResponse::BrightnessApplied(Ok(value)) => {
                 self.state.status_message = Some(format!("Brightness set to {}%", value));
                 self.state.error_message = None;
+                // Refresh state after change
+                self.request_load_device_state();
             }
             AsyncResponse::BrightnessApplied(Err(e)) => {
                 self.state.error_message = Some(format!("Failed to set brightness: {}", e));
@@ -165,6 +156,8 @@ impl App {
             AsyncResponse::ColorApplied(Ok((r, g, b))) => {
                 self.state.status_message = Some(format!("Color set to RGB({},{},{})", r, g, b));
                 self.state.error_message = None;
+                // Refresh state after change
+                self.request_load_device_state();
             }
             AsyncResponse::ColorApplied(Err(e)) => {
                 self.state.error_message = Some(format!("Failed to set color: {}", e));
@@ -174,25 +167,12 @@ impl App {
                 self.state.status_message =
                     Some(format!("Power {}", if state { "ON" } else { "OFF" }));
                 self.state.error_message = None;
+                // Refresh state after change
+                self.request_load_device_state();
             }
             AsyncResponse::PowerToggled(Err(e)) => {
                 self.state.error_message = Some(format!("Failed to toggle power: {}", e));
             }
         }
-    }
-
-    pub fn request_load_all_device_states(&mut self) {
-        if self.devices.is_empty() {
-            return;
-        }
-
-        let devices: Vec<(String, String)> = self
-            .devices
-            .iter()
-            .map(|d| (d.id.clone(), d.model.clone()))
-            .collect();
-
-        self.loading = true;
-        let _ = self.cmd_tx.send(AsyncCommand::LoadAllDeviceStates { devices });
     }
 }

@@ -5,32 +5,16 @@ use ratatui::{
     Frame,
 };
 
+use crate::ui::focus::Focus;
 use crate::ui::theme::Theme;
-use crate::ui::view_state::ViewMode;
 
-pub fn render(view_mode: &ViewMode, has_selection: bool, theme: &Theme, frame: &mut Frame, area: Rect) {
-    let keybindings = match view_mode {
-        ViewMode::List => {
-            if has_selection {
-                "[↑↓/jk] Navigate  [Enter] Details  [Space] Toggle  [R] Refresh  [?] Help  [Q] Quit"
-            } else {
-                "[↑↓/jk] Navigate  [Enter] Details  [Space] Toggle  [R] Refresh  [?] Help  [Q] Quit"
-            }
+pub fn render(focus: &Focus, theme: &Theme, frame: &mut Frame, area: Rect) {
+    let keybindings = match focus {
+        Focus::List => {
+            "[↑↓/jk] Navigate  [Enter] Detail Focus  [Tab] Switch  [R] Refresh  [?] Help  [Q] Quit"
         }
-        ViewMode::Detail => {
-            "[Space] Power  [↑↓] Brightness  [C] Color  [Esc] Back  [?] Help"
-        }
-        ViewMode::ColorPicker => {
-            "[Tab] Channel  [↑↓] Adjust  [Enter] Apply  [Esc] Cancel"
-        }
-        ViewMode::Brightness => {
-            "[↑↓] Adjust  [1-9] Set %  [Enter] Apply  [Esc] Cancel"
-        }
-        ViewMode::Search => {
-            "[Type] Filter  [Backspace] Delete  [Enter] Done  [Esc] Cancel"
-        }
-        ViewMode::Help => {
-            "[Any Key] Close Help"
+        Focus::Detail => {
+            "[Space] Power  [↑↓] Brightness  [C] Color  [Esc] List  [Tab] Switch  [?] Help"
         }
     };
 

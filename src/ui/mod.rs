@@ -13,6 +13,7 @@ use crate::{api, config, db};
 
 pub mod app;
 pub mod async_ops;
+pub mod focus;
 pub mod handlers;
 pub mod layout;
 pub mod renderer;
@@ -21,7 +22,7 @@ pub mod view_state;
 pub mod widgets;
 
 use app::App;
-use view_state::ViewMode;
+use focus::Focus;
 
 pub async fn run(client: api::Client, db: db::Database, config: config::Config) -> Result<()> {
     // Setup terminal
@@ -72,35 +73,9 @@ async fn run_loop(
             if let Event::Key(key) = event::read()? {
                 app.handle_key(key.code, key.modifiers);
 
-                // Handle async actions (non-blocking requests)
-                match &app.state.view_mode {
-                    ViewMode::List | ViewMode::Detail => {
-                        // Load device state if we don't have it
-                        if app.state.device_state.is_none() {
-                            app.request_load_device_state();
-                        }
-                    }
-                    ViewMode::Brightness => {
-                        // Apply brightness on Enter
-                        if matches!(key.code, crossterm::event::KeyCode::Enter) {
-                            if let Some(brightness) = &app.state.brightness_control {
-                                let value = brightness.value;
-                                app.request_apply_brightness(value);
-                                app.state.exit_to_detail();
-                            }
-                        }
-                    }
-                    ViewMode::ColorPicker => {
-                        // Apply color on Enter
-                        if matches!(key.code, crossterm::event::KeyCode::Enter) {
-                            if let Some(picker) = &app.state.color_picker {
-                                let (r, g, b) = (picker.r, picker.g, picker.b);
-                                app.request_apply_color(r, g, b);
-                                app.state.exit_to_detail();
-                            }
-                        }
-                    }
-                    _ => {}
+                // Load state when focusing detail pane
+                if app.state.focus == Focus::Detail && app.state.device_state.is_none() {
+                    app.request_load_device_state();
                 }
 
                 // Handle refresh request

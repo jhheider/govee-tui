@@ -1,92 +1,93 @@
 use crossterm::event::{KeyCode, KeyModifiers};
-
 use super::app::App;
-use super::view_state::ViewMode;
+use super::focus::Focus;
+use super::view_state::Modal;
 
 impl App {
     pub fn handle_key(&mut self, key: KeyCode, modifiers: KeyModifiers) {
-        match &self.state.view_mode {
-            ViewMode::List | ViewMode::Detail => self.handle_main_keys(key, modifiers),
-            ViewMode::Brightness => self.handle_brightness_keys(key, modifiers),
-            ViewMode::ColorPicker => self.handle_color_picker_keys(key, modifiers),
-            ViewMode::Search => self.handle_search_keys(key, modifiers),
-            ViewMode::Help => self.handle_help_keys(key, modifiers),
+        // Handle modals first
+        if self.state.has_modal() {
+            self.handle_modal_keys(key, modifiers);
+            return;
         }
-    }
 
-    fn handle_main_keys(&mut self, key: KeyCode, modifiers: KeyModifiers) {
+        // Global keys
         match (key, modifiers) {
             (KeyCode::Char('q'), _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
                 self.should_quit = true;
+                return;
+            }
+            (KeyCode::Char('?'), _) => {
+                self.state.open_help();
+                return;
             }
             (KeyCode::Char('r'), _) => {
                 self.needs_refresh = true;
+                return;
             }
-            (KeyCode::Char('f'), KeyModifiers::CONTROL) => {
-                self.state.enter_search();
+            (KeyCode::Tab, _) => {
+                self.state.toggle_focus();
+                // Load state when focusing detail pane
+                if self.state.focus == Focus::Detail && self.state.device_state.is_none() {
+                    self.request_load_device_state();
+                }
+                return;
             }
-            (KeyCode::Up, KeyModifiers::NONE) | (KeyCode::Char('k'), _) => {
+            _ => {}
+        }
+
+        // Focus-specific keys
+        match self.state.focus {
+            Focus::List => self.handle_list_focus(key, modifiers),
+            Focus::Detail => self.handle_detail_focus(key, modifiers),
+        }
+    }
+
+    fn handle_list_focus(&mut self, key: KeyCode, _modifiers: KeyModifiers) {
+        match key {
+            KeyCode::Up | KeyCode::Char('k') => {
                 self.move_selection(-1);
             }
-            (KeyCode::Down, KeyModifiers::NONE) | (KeyCode::Char('j'), _) => {
+            KeyCode::Down | KeyCode::Char('j') => {
                 self.move_selection(1);
             }
-            (KeyCode::Enter, _) => {
-                self.state.enter_detail_view();
+            KeyCode::Enter => {
+                self.state.focus = Focus::Detail;
+                self.request_load_device_state();
             }
+            _ => {}
+        }
+    }
+
+    fn handle_detail_focus(&mut self, key: KeyCode, modifiers: KeyModifiers) {
+        match (key, modifiers) {
+            (KeyCode::Esc, _) => {
+                self.state.focus = Focus::List;
+            }
+
+            // Power control
             (KeyCode::Char(' '), _) => {
-                self.state.toggle_selection();
-            }
-            (KeyCode::Char('x'), _) => {
-                self.state.clear_selections();
-            }
-            (KeyCode::Char('?'), _) => {
-                self.state.enter_help();
-            }
-            (KeyCode::Char(' '), _) => {
-                // Toggle power for selected device
                 if let Some(state) = &self.state.device_state {
                     let new_power = !state.power;
                     self.request_toggle_power(new_power);
                 }
             }
-            // Direct brightness control with arrows (10% default, 5% fine-grained)
-            (KeyCode::Up, KeyModifiers::SHIFT) | (KeyCode::Char('k'), KeyModifiers::SHIFT) => {
-                if let Some(state) = &self.state.device_state {
-                    let current = state.brightness.unwrap_or(50);
-                    let new_brightness = (current + 5).min(100);
-                    self.request_apply_brightness(new_brightness);
-                }
+
+            // Brightness control - SHIFT for fine adjustment
+            (KeyCode::Up, KeyModifiers::SHIFT) | (KeyCode::Char('K'), _) => {
+                self.adjust_brightness(5);
             }
-            (KeyCode::Down, KeyModifiers::SHIFT) | (KeyCode::Char('j'), KeyModifiers::SHIFT) => {
-                if let Some(state) = &self.state.device_state {
-                    let current = state.brightness.unwrap_or(50);
-                    let new_brightness = current.saturating_sub(5);
-                    self.request_apply_brightness(new_brightness);
-                }
+            (KeyCode::Down, KeyModifiers::SHIFT) | (KeyCode::Char('J'), _) => {
+                self.adjust_brightness(-5);
             }
             (KeyCode::Up, _) | (KeyCode::Char('k'), _) => {
-                if let Some(state) = &self.state.device_state {
-                    let current = state.brightness.unwrap_or(50);
-                    let new_brightness = (current + 10).min(100);
-                    self.request_apply_brightness(new_brightness);
-                }
+                self.adjust_brightness(10);
             }
             (KeyCode::Down, _) | (KeyCode::Char('j'), _) => {
-                if let Some(state) = &self.state.device_state {
-                    let current = state.brightness.unwrap_or(50);
-                    let new_brightness = current.saturating_sub(10);
-                    self.request_apply_brightness(new_brightness);
-                }
+                self.adjust_brightness(-10);
             }
-            // Toggle power with Space
-            (KeyCode::Char(' '), _) => {
-                if let Some(state) = &self.state.device_state {
-                    let new_power = !state.power;
-                    self.request_toggle_power(new_power);
-                }
-            }
-            // Advanced controls
+
+            // Color control
             (KeyCode::Char('c'), _) => {
                 let (r, g, b) = self
                     .state
@@ -95,99 +96,69 @@ impl App {
                     .and_then(|s| s.color)
                     .map(|c| (c.r, c.g, c.b))
                     .unwrap_or((255, 255, 255));
-                self.state.enter_color_picker(r, g, b);
+                self.state.modal = Modal::ColorPicker(
+                    crate::ui::widgets::color_picker::ColorPicker::new(r, g, b)
+                );
             }
+
             _ => {}
         }
     }
 
-    fn handle_brightness_keys(&mut self, key: KeyCode, modifiers: KeyModifiers) {
-        if let Some(brightness) = &mut self.state.brightness_control {
-            match (key, modifiers) {
-                (KeyCode::Esc, _) => {
-                    self.state.exit_to_detail();
-                }
-                (KeyCode::Enter, _) => {
-                    // Apply will be handled async in main loop
-                }
-                (KeyCode::Up, KeyModifiers::SHIFT) | (KeyCode::Char('k'), KeyModifiers::SHIFT) => {
-                    brightness.adjust(5);
-                }
-                (KeyCode::Down, KeyModifiers::SHIFT)
-                | (KeyCode::Char('j'), KeyModifiers::SHIFT) => {
-                    brightness.adjust(-5);
-                }
-                (KeyCode::Up, _) | (KeyCode::Char('k'), _) => {
-                    brightness.adjust(10);
-                }
-                (KeyCode::Down, _) | (KeyCode::Char('j'), _) => {
-                    brightness.adjust(-10);
-                }
-                (KeyCode::Char(c), _) if c.is_ascii_digit() => {
-                    let digit = c.to_digit(10).unwrap() as u8;
-                    if digit > 0 {
-                        brightness.set(digit * 10);
+    fn handle_modal_keys(&mut self, key: KeyCode, _modifiers: KeyModifiers) {
+        match &self.state.modal {
+            Modal::Help => {
+                // Any key closes help
+                self.state.close_modal();
+            }
+            Modal::ColorPicker(_) => {
+                match key {
+                    KeyCode::Esc => {
+                        self.state.close_modal();
                     }
+                    KeyCode::Enter => {
+                        if let Modal::ColorPicker(picker) = &self.state.modal {
+                            self.request_apply_color(picker.r, picker.g, picker.b);
+                        }
+                        self.state.close_modal();
+                    }
+                    KeyCode::Tab => {
+                        if let Modal::ColorPicker(ref mut picker) = self.state.modal {
+                            picker.next_channel();
+                        }
+                    }
+                    KeyCode::BackTab => {
+                        if let Modal::ColorPicker(ref mut picker) = self.state.modal {
+                            picker.prev_channel();
+                        }
+                    }
+                    KeyCode::Up => {
+                        if let Modal::ColorPicker(ref mut picker) = self.state.modal {
+                            picker.adjust(10);
+                        }
+                    }
+                    KeyCode::Down => {
+                        if let Modal::ColorPicker(ref mut picker) = self.state.modal {
+                            picker.adjust(-10);
+                        }
+                    }
+                    _ => {}
                 }
-                _ => {}
+            }
+            _ => {
+                // Close other modals with Esc
+                if matches!(key, KeyCode::Esc) {
+                    self.state.close_modal();
+                }
             }
         }
     }
 
-    fn handle_color_picker_keys(&mut self, key: KeyCode, modifiers: KeyModifiers) {
-        if let Some(picker) = &mut self.state.color_picker {
-            match (key, modifiers) {
-                (KeyCode::Esc, _) => {
-                    self.state.exit_to_detail();
-                }
-                (KeyCode::Enter, _) => {
-                    // Apply will be handled async in main loop
-                }
-                (KeyCode::Tab, _) => {
-                    picker.next_channel();
-                }
-                (KeyCode::BackTab, _) => {
-                    picker.prev_channel();
-                }
-                (KeyCode::Up, KeyModifiers::SHIFT) | (KeyCode::Char('k'), KeyModifiers::SHIFT) => {
-                    picker.adjust(5);
-                }
-                (KeyCode::Down, KeyModifiers::SHIFT)
-                | (KeyCode::Char('j'), KeyModifiers::SHIFT) => {
-                    picker.adjust(-5);
-                }
-                (KeyCode::Up, _) | (KeyCode::Char('k'), _) => {
-                    picker.adjust(10);
-                }
-                (KeyCode::Down, _) | (KeyCode::Char('j'), _) => {
-                    picker.adjust(-10);
-                }
-                _ => {}
-            }
+    fn adjust_brightness(&mut self, delta: i32) {
+        if let Some(state) = &self.state.device_state {
+            let current = state.brightness.unwrap_or(50) as i32;
+            let new_brightness = (current + delta).clamp(0, 100) as u8;
+            self.request_apply_brightness(new_brightness);
         }
-    }
-
-    fn handle_search_keys(&mut self, key: KeyCode, _modifiers: KeyModifiers) {
-        match key {
-            KeyCode::Esc => {
-                self.state.exit_to_list();
-            }
-            KeyCode::Char(c) => {
-                self.state.search_query.push(c);
-            }
-            KeyCode::Backspace => {
-                self.state.search_query.pop();
-            }
-            KeyCode::Enter => {
-                // Filter devices and return to list
-                self.state.exit_to_list();
-            }
-            _ => {}
-        }
-    }
-
-    fn handle_help_keys(&mut self, _key: KeyCode, _modifiers: KeyModifiers) {
-        // Any key exits help
-        self.state.exit_to_list();
     }
 }

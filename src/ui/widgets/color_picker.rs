@@ -7,6 +7,7 @@ use ratatui::{
 
 use crate::ui::theme::{Emoji, Theme};
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct ColorPicker {
     pub r: u8,
     pub g: u8,

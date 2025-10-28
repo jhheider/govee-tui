@@ -7,6 +7,7 @@ use ratatui::{
 
 use crate::ui::theme::{self, Emoji, Theme};
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct BrightnessControl {
     pub value: u8,
 }

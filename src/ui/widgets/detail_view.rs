@@ -1,5 +1,6 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
+    style::Style,
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
     Frame,
@@ -8,8 +9,14 @@ use ratatui::{
 use crate::api::{models::DeviceState, Device};
 use crate::ui::theme::{self, Emoji, Theme};
 
-pub fn render(device: &Device, state: Option<&DeviceState>, theme: &Theme, frame: &mut Frame, area: Rect) {
-
+pub fn render_with_style(
+    device: &Device,
+    state: Option<&DeviceState>,
+    theme: &Theme,
+    frame: &mut Frame,
+    area: Rect,
+    border_style: Style,
+) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -21,15 +28,20 @@ pub fn render(device: &Device, state: Option<&DeviceState>, theme: &Theme, frame
         ])
         .split(area);
 
-    // Device header
+    // Device header with emoji
+    let device_emoji = if device.is_group { "📦" } else { Emoji::LIGHT };
     let header = Paragraph::new(format!(
         "{} {} ({})",
-        Emoji::LIGHT,
+        device_emoji,
         device.name,
         device.model
     ))
     .style(theme.title)
-    .block(Block::default().borders(Borders::ALL).style(theme.border));
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(border_style),
+    );
     frame.render_widget(header, chunks[0]);
 
     // Power and basic info
@@ -99,7 +111,7 @@ pub fn render(device: &Device, state: Option<&DeviceState>, theme: &Theme, frame
         }
     }
 
-    // Controls help - contextual status bar with more prominent styling
+    // Controls help - more prominent in focused detail
     let help_lines = vec![
         Line::from(vec![
             Span::styled("[Space]", theme.highlight),
@@ -114,12 +126,10 @@ pub fn render(device: &Device, state: Option<&DeviceState>, theme: &Theme, frame
             Span::raw(" Color Picker  "),
             Span::styled("[Esc]", theme.highlight),
             Span::raw(" Back to List  "),
-            Span::styled("[?]", theme.highlight),
-            Span::raw(" Help"),
         ]),
     ];
     let help = Paragraph::new(help_lines)
         .style(theme.text)
-        .block(Block::default().borders(Borders::ALL).title("Interactive Controls"));
+        .block(Block::default().borders(Borders::ALL).title("Controls"));
     frame.render_widget(help, chunks[4]);
 }

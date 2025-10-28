@@ -1,4 +1,5 @@
 use ratatui::{
+    style::Style,
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem},
 };
@@ -6,38 +7,29 @@ use ratatui::{
 use crate::api::Device;
 use crate::ui::theme::{Emoji, Theme};
 
-pub fn render<'a>(
+pub fn render_with_style<'a>(
     devices: &'a [Device],
     selected_index: usize,
-    selected_devices: &'a [usize],
     theme: &'a Theme,
+    border_style: Style,
 ) -> List<'a> {
     let items: Vec<ListItem> = devices
         .iter()
         .enumerate()
         .map(|(i, device)| {
-            // Show controllable status (we don't have power state in list view)
-            let status_emoji = if device.controllable {
-                Emoji::SUCCESS
-            } else {
-                "⚪"
-            };
-
             let device_emoji = if device.is_group {
                 "📦" // Group emoji
             } else {
                 Emoji::LIGHT
             };
 
-            // Multi-select indicator
-            let select_indicator = if selected_devices.contains(&i) {
-                "[✓] "
+            let status_emoji = if device.controllable {
+                Emoji::SUCCESS
             } else {
-                "[ ] "
+                "⚪"
             };
 
             let content = Line::from(vec![
-                Span::raw(select_indicator),
                 Span::raw(device_emoji),
                 Span::raw(" "),
                 Span::styled(&device.name, theme.text),
@@ -62,7 +54,7 @@ pub fn render<'a>(
             Block::default()
                 .title(format!("{} Devices", Emoji::DEVICE))
                 .borders(Borders::ALL)
-                .style(theme.border),
+                .border_style(border_style),
         )
         .highlight_style(theme.highlight)
 }
