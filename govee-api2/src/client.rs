@@ -132,16 +132,15 @@ impl GoveeClient {
 
     /// Set device color
     pub async fn set_color(&self, device_id: &str, sku: &str, color: Color) -> Result<()> {
+        // Pack RGB into single integer: (r << 16) | (g << 8) | b
+        let packed_rgb = ((color.r as i64) << 16) | ((color.g as i64) << 8) | (color.b as i64);
+
         self.send_control(
             device_id,
             sku,
             "devices.capabilities.color_setting",
             "colorRgb",
-            json!({
-                "r": color.r,
-                "g": color.g,
-                "b": color.b
-            }),
+            json!(packed_rgb),
         )
         .await
     }
