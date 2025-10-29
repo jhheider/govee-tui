@@ -33,7 +33,7 @@ impl ColorPicker {
             r,
             g,
             b,
-            mode: ColorPickerMode::Rgb,
+            mode: ColorPickerMode::Browser,
             selected_channel: 0,
             selected_group: 0,
             selected_color: 0,
@@ -163,12 +163,22 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
             .split(area)
     };
 
-    // Title
-    let mode_str = match picker.mode {
-        ColorPickerMode::Rgb => "RGB Editor",
-        ColorPickerMode::Browser => "Color Browser",
+    // Title with mode indicator
+    let title_content = match picker.mode {
+        ColorPickerMode::Browser => {
+            format!(
+                "{} Color Picker - [Color Browser] / RGB Editor (Tab to switch)",
+                Emoji::COLOR
+            )
+        }
+        ColorPickerMode::Rgb => {
+            format!(
+                "{} Color Picker - Color Browser / [RGB Editor] (Tab to switch)",
+                Emoji::COLOR
+            )
+        }
     };
-    let title = Paragraph::new(format!("{} Color Picker - {}", Emoji::COLOR, mode_str))
+    let title = Paragraph::new(title_content)
         .style(theme.title)
         .block(Block::default().borders(Borders::ALL));
     frame.render_widget(title, chunks[0]);
