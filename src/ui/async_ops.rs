@@ -11,9 +11,6 @@ pub enum AsyncCommand {
         device_id: String,
         model: String,
     },
-    LoadAllDeviceStates {
-        devices: Vec<(String, String)>, // (id, model) pairs
-    },
     ApplyBrightness {
         device_ids: Vec<(String, String)>,
         value: u8,
@@ -28,6 +25,10 @@ pub enum AsyncCommand {
         device_ids: Vec<(String, String)>,
         state: bool,
     },
+    ApplyColorTemp {
+        device_ids: Vec<(String, String)>,
+        kelvin: u16,
+    },
 }
 
 /// Responses from the background worker
@@ -35,10 +36,10 @@ pub enum AsyncCommand {
 pub enum AsyncResponse {
     DevicesRefreshed(Result<Vec<Device>>),
     DeviceStateLoaded(Result<DeviceState>),
-    AllDeviceStatesLoaded(Vec<Option<DeviceState>>),
     BrightnessApplied(Result<u8>),
     ColorApplied(Result<(u8, u8, u8)>),
     PowerToggled(Result<bool>),
+    ColorTempApplied(Result<u16>),
 }
 
 /// Spawns a background worker task that processes API commands
@@ -62,20 +63,6 @@ pub fn spawn_worker(
                 AsyncCommand::LoadDeviceState { device_id, model } => {
                     let result = client.get_device_state(&device_id, &model).await;
                     AsyncResponse::DeviceStateLoaded(result)
-                }
-
-                AsyncCommand::LoadAllDeviceStates { devices } => {
-                    // Load states for all devices in parallel
-                    let futures: Vec<_> = devices
-                        .iter()
-                        .map(|(id, model)| client.get_device_state(id, model))
-                        .collect();
-
-                    let results = futures::future::join_all(futures).await;
-                    let states: Vec<Option<DeviceState>> =
-                        results.into_iter().map(|r| r.ok()).collect();
-
-                    AsyncResponse::AllDeviceStatesLoaded(states)
                 }
 
                 AsyncCommand::ApplyBrightness { device_ids, value } => {
@@ -157,6 +144,31 @@ pub fn spawn_worker(
                         Err(anyhow::anyhow!("Failed"))
                     };
                     AsyncResponse::PowerToggled(result)
+                }
+
+                AsyncCommand::ApplyColorTemp { device_ids, kelvin } => {
+                    let mut success = true;
+                    let futures: Vec<_> = device_ids
+                        .iter()
+                        .map(|(id, model)| {
+                            let cmd = Command::temperature(kelvin);
+                            client.control_device(id, model, cmd)
+                        })
+                        .collect();
+
+                    for result in futures::future::join_all(futures).await {
+                        if result.is_err() {
+                            success = false;
+                            break;
+                        }
+                    }
+
+                    let result = if success {
+                        Ok(kelvin)
+                    } else {
+                        Err(anyhow::anyhow!("Failed"))
+                    };
+                    AsyncResponse::ColorTempApplied(result)
                 }
             };
 

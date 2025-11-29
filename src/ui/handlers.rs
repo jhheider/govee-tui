@@ -100,6 +100,14 @@ impl App {
                     Modal::ColorPicker(crate::ui::widgets::color_picker::ColorPicker::new(r, g, b));
             }
 
+            // Color temperature control
+            (KeyCode::Char('t'), _) => {
+                self.adjust_color_temp(-500); // Decrease (warmer)
+            }
+            (KeyCode::Char('T'), _) => {
+                self.adjust_color_temp(500); // Increase (cooler)
+            }
+
             _ => {}
         }
     }
@@ -195,6 +203,14 @@ impl App {
             let current = state.brightness.unwrap_or(50) as i32;
             let new_brightness = (current + delta).clamp(0, 100) as u8;
             self.request_apply_brightness(new_brightness);
+        }
+    }
+
+    fn adjust_color_temp(&mut self, delta: i32) {
+        if let Some(state) = &self.state.device_state {
+            let current = state.color_temp.unwrap_or(4000) as i32;
+            let new_temp = (current + delta).clamp(2000, 9000) as u16;
+            self.request_apply_color_temp(new_temp);
         }
     }
 }

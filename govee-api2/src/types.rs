@@ -218,7 +218,9 @@ pub(crate) struct ControlResponse {
     pub code: i32,
     #[serde(default)]
     pub msg: String,
+    /// Capability echoed back from API (not currently used but kept for completeness)
     #[serde(default)]
+    #[allow(dead_code)]
     pub capability: Option<serde_json::Value>,
 }
 

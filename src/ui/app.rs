@@ -7,6 +7,8 @@ use super::theme::Theme;
 use super::view_state::AppState;
 
 pub struct App {
+    /// Client is cloned to spawn worker, kept for potential direct use
+    #[allow(dead_code)]
     pub client: api::Client,
     pub db: db::Database,
     #[allow(dead_code)]
@@ -114,6 +116,18 @@ impl App {
         }
     }
 
+    pub fn request_apply_color_temp(&mut self, kelvin: u16) {
+        if let Some(device) = self.selected_device() {
+            let device_id = device.id.clone();
+            let model = device.model.clone();
+            self.loading = true;
+            let _ = self.cmd_tx.send(AsyncCommand::ApplyColorTemp {
+                device_ids: vec![(device_id, model)],
+                kelvin,
+            });
+        }
+    }
+
     pub fn handle_async_response(&mut self, response: AsyncResponse) {
         self.loading = false;
 
@@ -137,10 +151,6 @@ impl App {
             }
             AsyncResponse::DeviceStateLoaded(Err(e)) => {
                 self.state.error_message = Some(format!("Failed to load device state: {e}"));
-            }
-
-            AsyncResponse::AllDeviceStatesLoaded(_states) => {
-                // Not used anymore
             }
 
             AsyncResponse::BrightnessApplied(Ok(value)) => {
@@ -185,6 +195,18 @@ impl App {
             }
             AsyncResponse::PowerToggled(Err(e)) => {
                 self.state.error_message = Some(format!("Failed to toggle power: {e}"));
+            }
+
+            AsyncResponse::ColorTempApplied(Ok(kelvin)) => {
+                self.state.status_message = Some(format!("Color temperature set to {kelvin}K"));
+                self.state.error_message = None;
+                // Optimistically update local state for instant feedback
+                if let Some(device_state) = &mut self.state.device_state {
+                    device_state.color_temp = Some(kelvin);
+                }
+            }
+            AsyncResponse::ColorTempApplied(Err(e)) => {
+                self.state.error_message = Some(format!("Failed to set color temperature: {e}"));
             }
         }
     }

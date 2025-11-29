@@ -113,6 +113,7 @@ impl App {
             "  ↑/↓, j/k    Adjust brightness ±10%".to_string(),
             "  Shift+↑/↓   Adjust brightness ±5% (fine control)".to_string(),
             "  c           Open color picker".to_string(),
+            "  t/T         Adjust color temp ±500K (warmer/cooler)".to_string(),
             "  Esc         Back to list focus".to_string(),
             "".to_string(),
             "═══ COLOR PICKER ═══".to_string(),

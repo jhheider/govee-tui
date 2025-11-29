@@ -6,15 +6,19 @@ A clean, colorful terminal user interface (TUI) for controlling Govee smart home
 
 - 💡 **Device Management**: List, inspect, and control all your Govee devices
 - 🎨 **Colorful Interface**: Beautiful emoji-rich TUI with real-time updates
-- ⚡ **Full Control**: Power, brightness, RGB color, and temperature control
-- 🔍 **Device Search**: Quick filter with Ctrl+F
-- 🎯 **Multi-Device Control**: Select and control multiple devices at once
-- 🎨 **Interactive Color Picker**: RGB selector with real-time preview
+- ⚡ **Full Control**: Power, brightness, RGB color, and color temperature
+- 🎨 **Interactive Color Picker**: RGB editor + 150+ named colors browser
+- 🌡️ **Color Temperature**: Adjust warm/cool lighting (2000K-9000K)
 - 📊 **Device Details**: View comprehensive device state and info
 - 🎚️ **Fine-Grained Control**: Shift+arrows for precise adjustments
 - 🗄️ **Smart Caching**: SQLite-based device state caching
-- ⌨️ **Vim-style Navigation**: Intuitive keyboard shortcuts
+- ⌨️ **Vim-style Navigation**: Intuitive keyboard shortcuts (hjkl)
 - 🚀 **Fast & Efficient**: Static binary with minimal dependencies
+- 🖥️ **CLI Mode**: Non-interactive commands for scripting
+
+### Planned Features
+- 🔍 **Device Search**: Filter devices by name (Ctrl+F)
+- 🎯 **Multi-Device Control**: Select and control multiple devices at once
 
 ## Installation
 
@@ -88,40 +92,35 @@ govee-tui
 
 **Keybindings:**
 
-#### Device List View
-- `↑/k` / `↓/j` - Navigate device list
-- `Enter` - View device details
-- `Space` - Multi-select device (checkboxes)
-- `x` - Clear all selections
-- `Ctrl+F` - Search/filter devices
+#### Global Keys
+- `?` - Show help modal
 - `r` - Refresh devices
+- `Tab` - Switch focus between List and Detail panes
 - `q` / `Ctrl+C` - Quit
+
+#### Device List View (when focused)
+- `↑/↓` or `j/k` - Navigate device list
+- `Enter` - Focus detail pane for selected device
 
 #### Device Detail View
 - `Esc` - Back to list
-- `Space` - Toggle power
-- `b` - Brightness control
-- `c` - RGB color picker
-- `t` - Color temperature (planned)
-
-#### Brightness Control
-- `↑↓` - Adjust ±5%
-- `Shift+↑↓` - Adjust ±1% (fine-grained)
-- `1-9` - Set to 10-90%
-- `Enter` - Apply changes
-- `Esc` - Cancel
+- `Space` - Toggle power ON/OFF
+- `↑/↓` or `j/k` - Adjust brightness ±10%
+- `Shift+↑/↓` or `J/K` - Adjust brightness ±5% (fine control)
+- `c` - Open RGB color picker
+- `t` - Decrease color temperature (warmer, -500K)
+- `T` - Increase color temperature (cooler, +500K)
 
 #### Color Picker
-- `Tab` / `Shift+Tab` - Switch R/G/B channel
-- `↑↓` - Adjust ±5
-- `Shift+↑↓` - Adjust ±1 (fine-grained)
+- `Tab` - Switch between RGB editor and Named Colors browser
+- **RGB Mode:**
+  - `↑/↓` - Select R/G/B channel
+  - `←/→` - Adjust value ±10
+- **Browser Mode:**
+  - `↑/↓` - Navigate colors within group
+  - `←/→` - Switch color group
 - `Enter` - Apply color
 - `Esc` - Cancel
-
-#### Search Mode
-- Type to filter devices by name/model
-- `Enter` - Return to list with filter applied
-- `Esc` - Cancel search
 
 ### CLI Mode
 
@@ -186,23 +185,14 @@ See [scripts/README.md](scripts/README.md) for full documentation.
 - Quick device control from command line
 - CI/CD integration testing
 
-## Supported Commands
+## Supported Commands (CLI)
 
-| Command | Description | Range | Multi-Device |
-|---------|-------------|-------|--------------|
-| `turn` | Power on/off | `on`, `off` | ✓ |
-| `brightness` | Set brightness | 0-100% | ✓ |
-| `color` | Set RGB color | 0-255 per channel | ✓ |
-| `temp` | Set color temperature | 2000-9000K | Planned |
-
-### Multi-Device Operations
-
-You can select multiple devices with `Space` and apply commands to all selected devices:
-1. Navigate to a device and press `Space` to select (✓ appears in checkbox)
-2. Repeat for additional devices
-3. Press `Enter` to view details of current device
-4. Make changes (brightness, color, power) - applies to ALL selected devices
-5. Press `x` to clear all selections
+| Command | Description | Range |
+|---------|-------------|-------|
+| `turn` | Power on/off | `on`, `off` |
+| `brightness` | Set brightness | 0-100% |
+| `color` | Set RGB color | 0-255 per channel |
+| `temp` | Set color temperature | 2000-9000K |
 
 ## Development
 
@@ -280,6 +270,6 @@ Contributions are welcome! Please:
 
 ## Acknowledgments
 
-- Built with [ratatui](https://github.com/ratatui-org/ratatui)
-- Uses [govee-api](https://github.com/mgierada/govee) Rust crate
+- Built with [ratatui](https://github.com/ratatui-org/ratatui) TUI framework
+- Uses the [Govee API v2](https://developer.govee.com/reference/get-you-devices)
 - Inspired by the need for a clean terminal interface for smart home control
