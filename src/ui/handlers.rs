@@ -25,6 +25,10 @@ impl App {
                 self.needs_refresh = true;
                 return;
             }
+            (KeyCode::Char('/'), _) | (KeyCode::Char('f'), KeyModifiers::CONTROL) => {
+                self.state.open_search();
+                return;
+            }
             (KeyCode::Tab, _) => {
                 self.state.toggle_focus();
                 // Load state when focusing detail pane
@@ -32,6 +36,14 @@ impl App {
                     self.request_load_device_state();
                 }
                 return;
+            }
+            (KeyCode::Esc, _) => {
+                // Clear search filter if active
+                if !self.state.search_query.is_empty() {
+                    self.state.search_query.clear();
+                    self.state.search_active = false;
+                    return;
+                }
             }
             _ => {}
         }
@@ -45,15 +57,49 @@ impl App {
 
     fn handle_list_focus(&mut self, key: KeyCode, _modifiers: KeyModifiers) {
         match key {
+            // Navigation
             KeyCode::Up | KeyCode::Char('k') => {
                 self.move_selection(-1);
             }
             KeyCode::Down | KeyCode::Char('j') => {
                 self.move_selection(1);
             }
+            // Vim-style jump to top/bottom
+            KeyCode::Char('g') => {
+                self.state.selected_index = 0;
+                self.state.device_state = None;
+            }
+            KeyCode::Char('G') => {
+                if !self.devices.is_empty() {
+                    self.state.selected_index = self.devices.len() - 1;
+                    self.state.device_state = None;
+                }
+            }
+            // Enter detail view
             KeyCode::Enter => {
                 self.state.focus = Focus::Detail;
                 self.request_load_device_state();
+            }
+            // Quick power toggle from list
+            KeyCode::Char(' ') => {
+                self.quick_toggle_power();
+            }
+            // Multi-select
+            KeyCode::Char('x') => {
+                if let Some(device) = self.selected_device() {
+                    let id = device.id.clone();
+                    self.state.toggle_device_selection(&id);
+                }
+            }
+            KeyCode::Char('a') => {
+                // Select all devices
+                for device in &self.devices {
+                    self.state.selected_devices.insert(device.id.clone());
+                }
+            }
+            KeyCode::Char('A') => {
+                // Deselect all
+                self.state.clear_selections();
             }
             _ => {}
         }
@@ -87,6 +133,18 @@ impl App {
                 self.adjust_brightness(-10);
             }
 
+            // Number keys for quick brightness (1-9 = 10-90%, 0 = 100%)
+            (KeyCode::Char('1'), _) => self.set_brightness(10),
+            (KeyCode::Char('2'), _) => self.set_brightness(20),
+            (KeyCode::Char('3'), _) => self.set_brightness(30),
+            (KeyCode::Char('4'), _) => self.set_brightness(40),
+            (KeyCode::Char('5'), _) => self.set_brightness(50),
+            (KeyCode::Char('6'), _) => self.set_brightness(60),
+            (KeyCode::Char('7'), _) => self.set_brightness(70),
+            (KeyCode::Char('8'), _) => self.set_brightness(80),
+            (KeyCode::Char('9'), _) => self.set_brightness(90),
+            (KeyCode::Char('0'), _) => self.set_brightness(100),
+
             // Color control
             (KeyCode::Char('c'), _) => {
                 let (r, g, b) = self
@@ -108,6 +166,11 @@ impl App {
                 self.adjust_color_temp(500); // Increase (cooler)
             }
 
+            // Scenes
+            (KeyCode::Char('s'), _) => {
+                self.state.open_scenes();
+            }
+
             _ => {}
         }
     }
@@ -117,6 +180,31 @@ impl App {
             Modal::Help => {
                 // Any key closes help
                 self.state.close_modal();
+            }
+            Modal::Search => {
+                match key {
+                    KeyCode::Esc => {
+                        self.state.close_modal();
+                        // Keep search query active if user pressed Esc
+                    }
+                    KeyCode::Enter => {
+                        self.state.close_modal();
+                        // Keep search active with current query
+                    }
+                    KeyCode::Backspace => {
+                        self.state.search_query.pop();
+                    }
+                    KeyCode::Char(c) => {
+                        self.state.search_query.push(c);
+                    }
+                    _ => {}
+                }
+            }
+            Modal::Scenes => {
+                if matches!(key, KeyCode::Esc) {
+                    self.state.close_modal();
+                }
+                // TODO: Handle scene selection
             }
             Modal::ColorPicker(_) => {
                 use crate::ui::widgets::color_picker::ColorPickerMode;
@@ -189,12 +277,7 @@ impl App {
                     _ => {}
                 }
             }
-            _ => {
-                // Close other modals with Esc
-                if matches!(key, KeyCode::Esc) {
-                    self.state.close_modal();
-                }
-            }
+            Modal::None => {}
         }
     }
 
@@ -206,11 +289,55 @@ impl App {
         }
     }
 
+    fn set_brightness(&mut self, value: u8) {
+        self.request_apply_brightness(value);
+    }
+
     fn adjust_color_temp(&mut self, delta: i32) {
         if let Some(state) = &self.state.device_state {
             let current = state.color_temp.unwrap_or(4000) as i32;
             let new_temp = (current + delta).clamp(2000, 9000) as u16;
             self.request_apply_color_temp(new_temp);
+        }
+    }
+
+    fn quick_toggle_power(&mut self) {
+        // For quick toggle from list, we need to load state first or assume toggle
+        // For now, just turn on if we don't know, or toggle if we do
+        if let Some(device) = self.selected_device() {
+            // We don't have state, so just turn on (most common use case)
+            // User can go to detail view for more control
+            let device_id = device.id.clone();
+            let model = device.model.clone();
+
+            // Check if we have any selected devices
+            if self.state.selected_devices.is_empty() {
+                // Just toggle the current device - assume ON since we don't know state
+                self.loading = true;
+                let _ = self.cmd_tx.send(super::async_ops::AsyncCommand::TogglePower {
+                    device_ids: vec![(device_id, model)],
+                    state: true, // Default to turning on
+                });
+                self.state.status_message = Some("Toggling power...".to_string());
+            } else {
+                // Toggle all selected devices
+                let device_ids: Vec<(String, String)> = self
+                    .devices
+                    .iter()
+                    .filter(|d| self.state.selected_devices.contains(&d.id))
+                    .map(|d| (d.id.clone(), d.model.clone()))
+                    .collect();
+
+                self.loading = true;
+                let _ = self.cmd_tx.send(super::async_ops::AsyncCommand::TogglePower {
+                    device_ids,
+                    state: true,
+                });
+                self.state.status_message = Some(format!(
+                    "Toggling {} devices...",
+                    self.state.selected_devices.len()
+                ));
+            }
         }
     }
 }

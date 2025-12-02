@@ -84,6 +84,7 @@ pub fn color_indicator(r: u8, g: u8, b: u8) -> String {
     }
 }
 
+#[allow(dead_code)]
 pub fn temp_indicator(kelvin: u16) -> String {
     if kelvin < 3500 {
         format!("{}K {}", kelvin, Emoji::WARM)

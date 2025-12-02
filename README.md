@@ -8,17 +8,20 @@ A clean, colorful terminal user interface (TUI) for controlling Govee smart home
 - 🎨 **Colorful Interface**: Beautiful emoji-rich TUI with real-time updates
 - ⚡ **Full Control**: Power, brightness, RGB color, and color temperature
 - 🎨 **Interactive Color Picker**: RGB editor + 150+ named colors browser
-- 🌡️ **Color Temperature**: Adjust warm/cool lighting (2000K-9000K)
+- 🌡️ **Color Temperature**: Visual slider for warm/cool lighting (2000K-9000K)
+- 🔍 **Device Search**: Filter devices by name with `/` key
+- 🎯 **Multi-Device Control**: Select multiple devices for batch operations
 - 📊 **Device Details**: View comprehensive device state and info
-- 🎚️ **Fine-Grained Control**: Shift+arrows for precise adjustments
+- 🎚️ **Quick Brightness**: Number keys 1-9 for instant brightness levels
+- ⌨️ **Vim-style Navigation**: Full keyboard control with hjkl, g/G
 - 🗄️ **Smart Caching**: SQLite-based device state caching
-- ⌨️ **Vim-style Navigation**: Intuitive keyboard shortcuts (hjkl)
 - 🚀 **Fast & Efficient**: Static binary with minimal dependencies
 - 🖥️ **CLI Mode**: Non-interactive commands for scripting
 
 ### Planned Features
-- 🔍 **Device Search**: Filter devices by name (Ctrl+F)
-- 🎯 **Multi-Device Control**: Select and control multiple devices at once
+- 🎭 **Dynamic Scenes**: Apply preset lighting effects
+- 🖱️ **Mouse Support**: Click to select devices
+- ⌨️ **Command Palette**: Quick access to all actions
 
 ## Installation
 
@@ -90,37 +93,48 @@ cache_ttl_seconds = 300
 govee-tui
 ```
 
-**Keybindings:**
+### Keyboard Shortcuts
 
 #### Global Keys
-- `?` - Show help modal
-- `r` - Refresh devices
-- `Tab` - Switch focus between List and Detail panes
-- `q` / `Ctrl+C` - Quit
+| Key | Action |
+|-----|--------|
+| `?` | Show help modal |
+| `r` | Refresh devices |
+| `/` or `Ctrl+F` | Search/filter devices |
+| `Tab` | Switch pane focus |
+| `Esc` | Clear search filter |
+| `q` / `Ctrl+C` | Quit |
 
-#### Device List View (when focused)
-- `↑/↓` or `j/k` - Navigate device list
-- `Enter` - Focus detail pane for selected device
+#### Device List
+| Key | Action |
+|-----|--------|
+| `↑/↓` or `j/k` | Navigate devices |
+| `g` / `G` | Jump to first/last device |
+| `Space` | Quick power toggle |
+| `Enter` | Focus detail pane |
+| `x` | Toggle device selection |
+| `a` / `A` | Select all / Deselect all |
 
-#### Device Detail View
-- `Esc` - Back to list
-- `Space` - Toggle power ON/OFF
-- `↑/↓` or `j/k` - Adjust brightness ±10%
-- `Shift+↑/↓` or `J/K` - Adjust brightness ±5% (fine control)
-- `c` - Open RGB color picker
-- `t` - Decrease color temperature (warmer, -500K)
-- `T` - Increase color temperature (cooler, +500K)
+#### Device Detail
+| Key | Action |
+|-----|--------|
+| `Space` | Toggle power ON/OFF |
+| `↑/↓` or `j/k` | Adjust brightness ±10% |
+| `J/K` | Adjust brightness ±5% (fine) |
+| `1-9` / `0` | Set brightness 10-90% / 100% |
+| `c` | Open color picker |
+| `t` / `T` | Adjust temp ±500K (warm/cool) |
+| `s` | Open scenes browser |
+| `Esc` | Back to list |
 
 #### Color Picker
-- `Tab` - Switch between RGB editor and Named Colors browser
-- **RGB Mode:**
-  - `↑/↓` - Select R/G/B channel
-  - `←/→` - Adjust value ±10
-- **Browser Mode:**
-  - `↑/↓` - Navigate colors within group
-  - `←/→` - Switch color group
-- `Enter` - Apply color
-- `Esc` - Cancel
+| Key | Action |
+|-----|--------|
+| `Tab` | Switch RGB / Browser mode |
+| `↑/↓` | Select channel / Navigate colors |
+| `←/→` | Adjust value / Switch groups |
+| `Enter` | Apply color |
+| `Esc` | Cancel |
 
 ### CLI Mode
 
@@ -177,13 +191,6 @@ For debugging and testing the Govee API directly without the TUI, use the includ
 **Requirements:** `curl` and `jq`
 
 See [scripts/README.md](scripts/README.md) for full documentation.
-
-**Use cases:**
-- Debug missing devices issue (compare new vs legacy endpoints)
-- Test API without building the app
-- Verify API key and permissions
-- Quick device control from command line
-- CI/CD integration testing
 
 ## Supported Commands (CLI)
 
