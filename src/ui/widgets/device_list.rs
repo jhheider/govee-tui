@@ -87,7 +87,10 @@ pub fn render_with_style<'a>(
 
     let title = format!(
         "{} Devices{}{}{}",
-        Emoji::DEVICE, focus_indicator, selection_info, search_info
+        Emoji::DEVICE,
+        focus_indicator,
+        selection_info,
+        search_info
     );
 
     List::new(items)

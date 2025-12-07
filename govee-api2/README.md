@@ -4,25 +4,41 @@ A complete Rust client for Govee's v2 router-based API.
 
 ## Features
 
-- ✅ Full async/await support with tokio
-- ✅ Device and group discovery
-- ✅ Device state queries
-- ✅ Power control (on/off)
-- ✅ Brightness control (0-100)
-- ✅ RGB color control
-- ✅ Color temperature control (2000-9000K)
-- ✅ Proper error handling with thiserror
-- ✅ Support for device groups
-- ✅ Type-safe API with builder patterns
+- Full async/await support with tokio
+- Device and group discovery
+- Device state queries
+- Power control (on/off)
+- Brightness control (0-100)
+- RGB color control
+- Color temperature control (2000-9000K)
+- Dynamic scenes and DIY scenes
+- Segment color control for RGBIC devices
+- Toggle controls (gradient, nightlight)
+- Proper error handling with thiserror
+- Support for device groups
+- Type-safe API with builder patterns
+- Configurable TLS backend (rustls or native-tls)
 
 ## Installation
 
 ```toml
 [dependencies]
 govee-api2 = "0.1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+```
+
+### TLS Backend Selection
+
+By default uses `rustls` (pure Rust, easier cross-compilation). To use native TLS:
+
+```toml
+[dependencies]
+govee-api2 = { version = "0.1", default-features = false, features = ["native-tls"] }
 ```
 
 ## Usage
+
+### Basic Usage
 
 ```rust
 use govee_api2::{GoveeClient, Color};
@@ -35,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let devices = client.get_devices().await?;
     for device in &devices {
         println!("{}: {} ({})",
-            if device.is_group() { "📦 Group" } else { "💡 Device" },
+            if device.is_group() { "Group" } else { "Device" },
             device.device_name,
             device.sku
         );
@@ -58,12 +74,60 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Get current state
         let state = client.get_device_state(&device.device, &device.sku).await?;
-        println!("Power: {:?}", state.power_state);
+        println!("Power: {}", state.power);
         println!("Brightness: {:?}", state.brightness);
     }
 
     Ok(())
 }
+```
+
+### Builder Pattern
+
+Use the builder for custom client configuration:
+
+```rust
+use govee_api2::GoveeClient;
+use std::time::Duration;
+
+let client = GoveeClient::builder("your-api-key")
+    .timeout(Duration::from_secs(10))
+    .user_agent("my-app/1.0")
+    .build()
+    .expect("Failed to build client");
+```
+
+### Dynamic Scenes
+
+```rust
+// Apply a dynamic scene by ID
+client.set_dynamic_scene(&device.device, &device.sku, 123).await?;
+
+// Apply a user-created DIY scene
+client.set_diy_scene(&device.device, &device.sku, 456).await?;
+```
+
+### RGBIC Segment Control
+
+```rust
+use govee_api2::Color;
+
+// Set individual segment colors on addressable LED strips
+client.set_segment_colors(&device.device, &device.sku, &[
+    (0, Color::new(255, 0, 0)),   // Segment 0: Red
+    (1, Color::new(0, 255, 0)),   // Segment 1: Green
+    (2, Color::new(0, 0, 255)),   // Segment 2: Blue
+]).await?;
+```
+
+### Toggle Controls
+
+```rust
+// Enable gradient mode
+client.set_toggle(&device.device, &device.sku, "gradientToggle", true).await?;
+
+// Enable nightlight mode
+client.set_toggle(&device.device, &device.sku, "nightlightToggle", true).await?;
 ```
 
 ## API Coverage
@@ -76,9 +140,14 @@ This crate implements the following Govee API v2 endpoints:
 
 ### Supported Capabilities
 
-- `devices.capabilities.on_off` - Power control
-- `devices.capabilities.range` - Brightness control
-- `devices.capabilities.color_setting` - RGB color and color temperature
+| Capability | Methods |
+|------------|---------|
+| `devices.capabilities.on_off` | `turn_on()`, `turn_off()` |
+| `devices.capabilities.range` | `set_brightness()` |
+| `devices.capabilities.color_setting` | `set_color()`, `set_color_temperature()` |
+| `devices.capabilities.dynamic_scene` | `set_dynamic_scene()`, `set_diy_scene()` |
+| `devices.capabilities.segment_color_setting` | `set_segment_colors()` |
+| `devices.capabilities.toggle` | `set_toggle()` |
 
 ## Device Groups
 

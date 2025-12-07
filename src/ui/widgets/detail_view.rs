@@ -43,7 +43,11 @@ pub fn render_with_style(
         .split(area);
 
     // Device header with emoji and loading indicator
-    let device_emoji = if device.is_group { "📦" } else { Emoji::LIGHT };
+    let device_emoji = if device.is_group {
+        "📦"
+    } else {
+        Emoji::LIGHT
+    };
     let loading_indicator = if loading { " ⏳" } else { "" };
     let header = Paragraph::new(format!(
         "{} {} ({}){}",
@@ -121,19 +125,12 @@ pub fn render_with_style(
             ]),
             Line::from(Span::raw(&bar_text)),
         ])
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title("Brightness"),
-        );
+        .block(Block::default().borders(Borders::ALL).title("Brightness"));
         frame.render_widget(brightness_widget, chunks[2]);
     } else {
         let brightness_widget =
-            Paragraph::new(Line::from(Span::styled("Not supported", theme.dim))).block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("Brightness"),
-            );
+            Paragraph::new(Line::from(Span::styled("Not supported", theme.dim)))
+                .block(Block::default().borders(Borders::ALL).title("Brightness"));
         frame.render_widget(brightness_widget, chunks[2]);
     }
 
@@ -172,10 +169,7 @@ pub fn render_with_style(
                         "🌡️ {}K {}  [t/T] ±500K",
                         temp, temp_emoji
                     )));
-                    lines.push(Line::from(format!(
-                        "   WARM {} COOL",
-                        temp_bar(temp, 20)
-                    )));
+                    lines.push(Line::from(format!("   WARM {} COOL", temp_bar(temp, 20))));
                 } else {
                     lines.push(Line::from(Span::raw("🌡️ Loading...")));
                 }
@@ -196,8 +190,8 @@ pub fn render_with_style(
         );
         frame.render_widget(color_widget, chunks[3]);
     } else {
-        let color_widget =
-            Paragraph::new(Line::from(Span::styled("Not supported", theme.dim))).block(
+        let color_widget = Paragraph::new(Line::from(Span::styled("Not supported", theme.dim)))
+            .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .title("Color & Temperature"),

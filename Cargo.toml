@@ -1,8 +1,11 @@
+[workspace]
+members = [".", "govee-api2"]
+
 [package]
 name = "govee-tui"
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name <you@example.com>"]
+authors = ["Jacob Heider <jacob@jhheider.com>"]
 license = "MIT OR Apache-2.0"
 description = "Clean, colorful TUI for controlling Govee smart devices"
 repository = "https://github.com/jhheider/govee-tui"

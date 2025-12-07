@@ -172,14 +172,12 @@ impl App {
             self.state.search_query
         );
 
-        let search_widget = Paragraph::new(search_text)
-            .style(self.theme.text)
-            .block(
-                Block::default()
-                    .title(" Search Devices ")
-                    .borders(Borders::ALL)
-                    .border_style(self.theme.border_focused),
-            );
+        let search_widget = Paragraph::new(search_text).style(self.theme.text).block(
+            Block::default()
+                .title(" Search Devices ")
+                .borders(Borders::ALL)
+                .border_style(self.theme.border_focused),
+        );
 
         frame.render_widget(search_widget, popup_area);
     }

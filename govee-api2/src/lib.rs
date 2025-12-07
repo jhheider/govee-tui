@@ -7,9 +7,24 @@
 //! - Device discovery and listing
 //! - Device groups
 //! - Device control (power, brightness, color, color temperature)
+//! - Dynamic scenes and DIY scenes
+//! - Segment color control for RGBIC devices
 //! - Device state queries
 //!
-//! ## Example
+//! ## Features
+//!
+//! - **TLS Backend Selection**: By default uses `rustls` (pure Rust TLS). Enable
+//!   `native-tls` feature to use the system's TLS implementation instead.
+//!
+//! ```toml
+//! # Default (rustls)
+//! govee-api2 = "0.1"
+//!
+//! # Use native TLS (OpenSSL on Linux, Secure Transport on macOS)
+//! govee-api2 = { version = "0.1", default-features = false, features = ["native-tls"] }
+//! ```
+//!
+//! ## Quick Start
 //!
 //! ```rust,no_run
 //! use govee_api2::GoveeClient;
@@ -24,18 +39,39 @@
 //!
 //!     // Control a device
 //!     if let Some(device) = devices.first() {
-//!         client.turn_on(&device.device).await?;
-//!         client.set_brightness(&device.device, 80).await?;
+//!         client.turn_on(&device.device, &device.sku).await?;
+//!         client.set_brightness(&device.device, &device.sku, 80).await?;
 //!     }
 //!
 //!     Ok(())
 //! }
 //! ```
+//!
+//! ## Custom Client Configuration
+//!
+//! Use the builder pattern for custom timeout and user-agent:
+//!
+//! ```rust,no_run
+//! use govee_api2::GoveeClient;
+//! use std::time::Duration;
+//!
+//! let client = GoveeClient::builder("your-api-key")
+//!     .timeout(Duration::from_secs(10))
+//!     .user_agent("my-app/1.0")
+//!     .build()
+//!     .expect("Failed to build client");
+//! ```
+//!
+//! ## Getting a Govee API Key
+//!
+//! 1. Download the Govee Home app
+//! 2. Go to Settings → About Us → Apply for API Key
+//! 3. Follow the instructions to receive your key via email
 
 pub mod client;
 pub mod error;
 pub mod types;
 
-pub use client::GoveeClient;
+pub use client::{GoveeClient, GoveeClientBuilder};
 pub use error::{Error, Result};
 pub use types::*;

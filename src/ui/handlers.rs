@@ -314,10 +314,12 @@ impl App {
             if self.state.selected_devices.is_empty() {
                 // Just toggle the current device - assume ON since we don't know state
                 self.loading = true;
-                let _ = self.cmd_tx.send(super::async_ops::AsyncCommand::TogglePower {
-                    device_ids: vec![(device_id, model)],
-                    state: true, // Default to turning on
-                });
+                let _ = self
+                    .cmd_tx
+                    .send(super::async_ops::AsyncCommand::TogglePower {
+                        device_ids: vec![(device_id, model)],
+                        state: true, // Default to turning on
+                    });
                 self.state.status_message = Some("Toggling power...".to_string());
             } else {
                 // Toggle all selected devices
@@ -329,10 +331,12 @@ impl App {
                     .collect();
 
                 self.loading = true;
-                let _ = self.cmd_tx.send(super::async_ops::AsyncCommand::TogglePower {
-                    device_ids,
-                    state: true,
-                });
+                let _ = self
+                    .cmd_tx
+                    .send(super::async_ops::AsyncCommand::TogglePower {
+                        device_ids,
+                        state: true,
+                    });
                 self.state.status_message = Some(format!(
                     "Toggling {} devices...",
                     self.state.selected_devices.len()
