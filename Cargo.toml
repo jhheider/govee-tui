@@ -14,7 +14,7 @@ categories = ["command-line-utilities"]
 govee-api2 = { path = "govee-api2" }
 
 # TUI
-ratatui = "0.28"
+ratatui = "0.30"
 crossterm = "0.28"
 
 # CLI

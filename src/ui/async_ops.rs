@@ -11,9 +11,6 @@ pub enum AsyncCommand {
         device_id: String,
         model: String,
     },
-    LoadAllDeviceStates {
-        devices: Vec<(String, String)>, // (id, model) pairs
-    },
     ApplyBrightness {
         device_ids: Vec<(String, String)>,
         value: u8,
@@ -35,7 +32,6 @@ pub enum AsyncCommand {
 pub enum AsyncResponse {
     DevicesRefreshed(Result<Vec<Device>>),
     DeviceStateLoaded(Result<DeviceState>),
-    AllDeviceStatesLoaded(Vec<Option<DeviceState>>),
     BrightnessApplied(Result<u8>),
     ColorApplied(Result<(u8, u8, u8)>),
     PowerToggled(Result<bool>),
@@ -62,20 +58,6 @@ pub fn spawn_worker(
                 AsyncCommand::LoadDeviceState { device_id, model } => {
                     let result = client.get_device_state(&device_id, &model).await;
                     AsyncResponse::DeviceStateLoaded(result)
-                }
-
-                AsyncCommand::LoadAllDeviceStates { devices } => {
-                    // Load states for all devices in parallel
-                    let futures: Vec<_> = devices
-                        .iter()
-                        .map(|(id, model)| client.get_device_state(id, model))
-                        .collect();
-
-                    let results = futures::future::join_all(futures).await;
-                    let states: Vec<Option<DeviceState>> =
-                        results.into_iter().map(|r| r.ok()).collect();
-
-                    AsyncResponse::AllDeviceStatesLoaded(states)
                 }
 
                 AsyncCommand::ApplyBrightness { device_ids, value } => {

@@ -7,7 +7,6 @@ use super::theme::Theme;
 use super::view_state::AppState;
 
 pub struct App {
-    pub client: api::Client,
     pub db: db::Database,
     #[allow(dead_code)]
     pub config: config::Config,
@@ -23,10 +22,9 @@ pub struct App {
 
 impl App {
     pub fn new(client: api::Client, db: db::Database, config: config::Config) -> Self {
-        let (cmd_tx, resp_rx) = super::async_ops::spawn_worker(client.clone());
+        let (cmd_tx, resp_rx) = super::async_ops::spawn_worker(client);
 
         Self {
-            client,
             db,
             config,
             theme: Theme::dark(),
@@ -137,10 +135,6 @@ impl App {
             }
             AsyncResponse::DeviceStateLoaded(Err(e)) => {
                 self.state.error_message = Some(format!("Failed to load device state: {e}"));
-            }
-
-            AsyncResponse::AllDeviceStatesLoaded(_states) => {
-                // Not used anymore
             }
 
             AsyncResponse::BrightnessApplied(Ok(value)) => {

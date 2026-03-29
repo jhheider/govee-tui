@@ -218,8 +218,6 @@ pub(crate) struct ControlResponse {
     pub code: i32,
     #[serde(default)]
     pub msg: String,
-    #[serde(default)]
-    pub capability: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize)]

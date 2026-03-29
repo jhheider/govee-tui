@@ -1,13 +1,12 @@
 use super::focus::Focus;
 use crate::api::models::DeviceState;
-use crate::ui::widgets::{brightness::BrightnessControl, color_picker::ColorPicker};
+use crate::ui::widgets::color_picker::ColorPicker;
 
 /// Modal overlays that can appear on top of the main view
 #[derive(Debug, Clone, PartialEq)]
 pub enum Modal {
     None,
     Help,
-    Brightness(BrightnessControl),
     ColorPicker(ColorPicker),
 }
 
