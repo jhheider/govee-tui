@@ -47,7 +47,7 @@ unicode-width = "0.1"
 
 # Config
 toml = "1.1"
-dirs = "5.0"
+dirs = "6.0"
 
 # Color names
 color-name = "1.1"
