@@ -1,11 +1,13 @@
 use anyhow::{Context, Result};
-use govee_api2::GoveeClient;
-use tracing::{debug, info};
+use govee_api2::{ClientConfig, GoveeClient};
+use std::time::Duration;
+use tracing::{debug, info, warn};
 
 pub mod commands;
 pub mod models;
 
 pub use commands::Command;
+pub use govee_api2::Scene;
 pub use models::Device;
 pub use models::DeviceState;
 
@@ -15,8 +17,15 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(api_key: &str) -> Result<Self> {
-        let inner = GoveeClient::new(api_key);
+    pub fn new(config: &crate::config::ApiConfig) -> Result<Self> {
+        let inner = GoveeClient::with_config(
+            &config.key,
+            ClientConfig {
+                timeout: Duration::from_millis(config.timeout_ms),
+                retry_attempts: config.retry_attempts,
+                ..ClientConfig::default()
+            },
+        );
         info!("Govee API client initialized (govee-api2)");
         Ok(Self { inner })
     }
@@ -75,10 +84,33 @@ impl Client {
                     .set_color_temperature(device_id, model, kelvin as i32)
                     .await?;
             }
+            Command::Scene(scene) => {
+                self.inner.set_scene(device_id, model, &scene).await?;
+            }
         }
 
         info!("Device {} controlled successfully", device_id);
         Ok(())
+    }
+
+    /// Dynamic light scenes plus the user's DIY scenes. A missing/failed
+    /// DIY list doesn't fail the call — not every device or account has one.
+    pub async fn get_scenes(&self, device_id: &str, model: &str) -> Result<Vec<Scene>> {
+        debug!("Fetching scenes for device {}", device_id);
+
+        let mut scenes = self
+            .inner
+            .get_dynamic_scenes(device_id, model)
+            .await
+            .context("Failed to fetch scenes")?;
+
+        match self.inner.get_diy_scenes(device_id, model).await {
+            Ok(diy) => scenes.extend(diy),
+            Err(e) => warn!("Failed to fetch DIY scenes for {device_id}: {e}"),
+        }
+
+        info!("Fetched {} scenes for device {}", scenes.len(), device_id);
+        Ok(scenes)
     }
 
     pub async fn get_device_state(
@@ -96,7 +128,6 @@ impl Client {
 
         // Convert govee_api2::DeviceState to our DeviceState
         Ok(models::DeviceState {
-            online: true, // If we got a response, device is online
             power: state.power,
             brightness: state.brightness.map(|b| b as u8),
             color: state.color.map(|c| models::RgbColor::new(c.r, c.g, c.b)),

@@ -11,10 +11,10 @@ use crate::ui::theme::Theme;
 pub fn render(focus: &Focus, theme: &Theme, frame: &mut Frame, area: Rect) {
     let keybindings = match focus {
         Focus::List => {
-            "[↑↓/jk] Navigate  [Enter] Detail Focus  [Tab] Switch  [R] Refresh  [?] Help  [Q] Quit"
+            "[↑↓/jk] navigate  [space] power  [enter] detail  [tab] switch  [r] refresh  [?] help  [q] quit"
         }
         Focus::Detail => {
-            "[Space] Power  [↑↓] Brightness  [C] Color  [Esc] List  [Tab] Switch  [?] Help"
+            "[space] power  [↑↓/kj] brightness  [←→/hl] temp  [c] color  [s] scenes  [esc] list  [?] help"
         }
     };
 

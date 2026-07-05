@@ -1,4 +1,7 @@
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::{
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+};
 
 pub struct Theme {
     pub title: Style,
@@ -71,17 +74,16 @@ pub fn brightness_bar(value: u8, width: usize) -> String {
     format!("{}{}", "█".repeat(filled), "░".repeat(empty))
 }
 
-pub fn color_indicator(r: u8, g: u8, b: u8) -> String {
-    match (r, g, b) {
-        (255, 0, 0) => "🔴 Red".to_string(),
-        (0, 255, 0) => "🟢 Green".to_string(),
-        (0, 0, 255) => "🔵 Blue".to_string(),
-        (255, 255, 0) => "🟡 Yellow".to_string(),
-        (255, 0, 255) => "🟣 Magenta".to_string(),
-        (0, 255, 255) => "🔵 Cyan".to_string(),
-        (255, 255, 255) => "⚪ White".to_string(),
-        _ => format!("🌈 RGB({r},{g},{b})"),
-    }
+/// A block of terminal cells painted with the actual RGB color
+pub fn color_swatch(r: u8, g: u8, b: u8, width: usize) -> Span<'static> {
+    Span::styled(" ".repeat(width), Style::default().bg(Color::Rgb(r, g, b)))
+}
+
+pub fn color_indicator(r: u8, g: u8, b: u8) -> Line<'static> {
+    Line::from(vec![
+        color_swatch(r, g, b, 6),
+        Span::raw(format!(" RGB({r},{g},{b}) #{r:02X}{g:02X}{b:02X}")),
+    ])
 }
 
 pub fn temp_indicator(kelvin: u16) -> String {

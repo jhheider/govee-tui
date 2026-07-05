@@ -12,6 +12,7 @@ use crate::ui::theme::{self, Emoji, Theme};
 pub fn render_with_style(
     device: &Device,
     state: Option<&DeviceState>,
+    state_loading: bool,
     theme: &Theme,
     frame: &mut Frame,
     area: Rect,
@@ -27,6 +28,13 @@ pub fn render_with_style(
             Constraint::Min(0),
         ])
         .split(area);
+
+    // When no state is available yet, be honest about why
+    let unknown = if state_loading {
+        format!("{} Loading…", Emoji::LOADING)
+    } else {
+        "unknown — press Enter to load".to_string()
+    };
 
     // Device header with emoji
     let device_emoji = if device.is_group {
@@ -54,7 +62,7 @@ pub fn render_with_style(
             format!("{} OFF", Emoji::POWER_OFF)
         }
     } else {
-        "⏳ Loading...".to_string()
+        unknown.clone()
     };
 
     // Build capabilities list
@@ -70,6 +78,9 @@ pub fn render_with_style(
     }
     if device.supports_color_temp {
         caps.push("🌡️Temp");
+    }
+    if device.supports_scenes {
+        caps.push("🎬Scenes");
     }
     let caps_str = if caps.is_empty() {
         "None".to_string()
@@ -111,7 +122,7 @@ pub fn render_with_style(
             }
         } else {
             (
-                format!("{} Brightness: Loading...", Emoji::BRIGHTNESS),
+                format!("{} Brightness: {}", Emoji::BRIGHTNESS, unknown),
                 String::new(),
             )
         };
@@ -133,25 +144,17 @@ pub fn render_with_style(
 
         if let Some(s) = state {
             if let Some(color) = s.color {
-                lines.push(Line::from(theme::color_indicator(
-                    color.r, color.g, color.b,
-                )));
+                lines.push(theme::color_indicator(color.r, color.g, color.b));
             } else if device.supports_color {
-                lines.push(Line::from("RGB: Loading..."));
+                lines.push(Line::from("RGB: unknown"));
             }
 
-            if let Some(temp) = s.color_temp {
+            // 0K means the device is in color mode, not temperature mode
+            if let Some(temp) = s.color_temp.filter(|t| *t > 0) {
                 lines.push(Line::from(theme::temp_indicator(temp)));
-            } else if device.supports_color_temp {
-                lines.push(Line::from("Temperature: Loading..."));
             }
         } else {
-            if device.supports_color {
-                lines.push(Line::from("RGB: Loading..."));
-            }
-            if device.supports_color_temp {
-                lines.push(Line::from("Temperature: Loading..."));
-            }
+            lines.push(Line::from(unknown.clone()));
         }
 
         let color_widget =
@@ -169,7 +172,7 @@ pub fn render_with_style(
 
     if device.supports_power {
         help_lines.push(Line::from(vec![
-            Span::styled("[Space]", theme.highlight),
+            Span::styled("[space]", theme.highlight),
             Span::raw(" Power On/Off"),
         ]));
     }
@@ -178,24 +181,40 @@ pub fn render_with_style(
         help_lines.push(Line::from(vec![
             Span::styled("[↑↓]", theme.highlight),
             Span::raw(" Brightness ±10%  "),
-            Span::styled("[Shift+↑↓]", theme.highlight),
+            Span::styled("[shift+↑↓]", theme.highlight),
             Span::raw(" ±5%"),
+        ]));
+    }
+
+    if device.supports_color_temp {
+        help_lines.push(Line::from(vec![
+            Span::styled("[←→]", theme.highlight),
+            Span::raw(" Temp ±500K  "),
+            Span::styled("[shift+←→]", theme.highlight),
+            Span::raw(" ±100K"),
         ]));
     }
 
     if device.supports_color {
         help_lines.push(Line::from(vec![
-            Span::styled("[C]", theme.highlight),
+            Span::styled("[c]", theme.highlight),
             Span::raw(" Color Picker ("),
-            Span::styled("Enter", theme.highlight),
+            Span::styled("enter", theme.highlight),
             Span::raw(" to apply)"),
         ]));
     }
 
+    if device.supports_scenes {
+        help_lines.push(Line::from(vec![
+            Span::styled("[s]", theme.highlight),
+            Span::raw(" Scenes"),
+        ]));
+    }
+
     help_lines.push(Line::from(vec![
-        Span::styled("[Esc]", theme.highlight),
+        Span::styled("[esc]", theme.highlight),
         Span::raw(" Back to List  "),
-        Span::styled("[Tab]", theme.highlight),
+        Span::styled("[tab]", theme.highlight),
         Span::raw(" Switch Focus"),
     ]));
 

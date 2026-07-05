@@ -1,3 +1,5 @@
+use govee_api2::Scene;
+
 #[derive(Debug, Clone)]
 pub enum Command {
     TurnOn,
@@ -5,6 +7,7 @@ pub enum Command {
     Brightness(u8),
     Color(u8, u8, u8),
     ColorTemp(u16),
+    Scene(Scene),
 }
 
 impl Command {

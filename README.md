@@ -1,38 +1,23 @@
 # Govee TUI
 
-A clean, colorful terminal user interface (TUI) for controlling Govee smart home devices.
+A clean, colorful terminal user interface (TUI) for controlling Govee smart home devices — the only maintained Govee TUI around.
+
+![demo](demo.gif)
+
+> **Heads up:** this talks to Govee's **cloud API**, so every control is an HTTPS round-trip (typically a few hundred ms) and subject to Govee's rate limits (10,000 requests/day). The app debounces and serializes controls so normal use stays well inside the limits.
 
 ## Features
 
-- 💡 **Device Management**: List, inspect, and control all your Govee devices
-- 🎨 **Colorful Interface**: Beautiful emoji-rich TUI with real-time updates
-- ⚡ **Full Control**: Power, brightness, RGB color (TUI); color temperature (CLI)
-- 🎨 **Interactive Color Picker**: RGB editor and named-color browser with real-time preview
-- 📊 **Device Details**: View comprehensive device state and info
-- 🎚️ **Fine-Grained Control**: Shift+arrows for precise brightness adjustments
-- 🗄️ **Smart Caching**: SQLite-based device state caching
-- ⌨️ **Vim-style Navigation**: Intuitive keyboard shortcuts
-- 🚀 **Fast & Efficient**: Static binary with minimal dependencies
+- 💡 **Device management**: list, inspect, and control all your Govee devices
+- ⚡ **Full control**: power, brightness, RGB color, color temperature, and scenes — all in the TUI (and most via CLI)
+- 🎬 **Scene picker**: browse and apply your device's light scenes and DIY scenes
+- 🎨 **Interactive color picker**: RGB editor and named-color browser with true-color swatches
+- 🚦 **Rate-limit aware**: optimistic updates with debounced sends — hold the brightness key without burning your API budget
+- 🗂️ **Instant startup**: paints your last-seen device list from a local cache while it refreshes
+- ⌨️ **Vim-style navigation**: `j/k/h/l` plus arrows everywhere
+- 🚀 **Small and self-contained**: single binary, rustls (no OpenSSL)
 
 ## Installation
-
-### From Pre-built Binaries
-
-Download the latest release for your platform:
-
-```bash
-# Linux (x86_64)
-curl -L https://github.com/jhheider/govee-tui/releases/latest/download/govee-tui-linux-x86_64.tar.gz | tar xz
-sudo mv govee-tui /usr/local/bin/
-
-# macOS (Intel)
-curl -L https://github.com/jhheider/govee-tui/releases/latest/download/govee-tui-macos-x86_64.tar.gz | tar xz
-sudo mv govee-tui /usr/local/bin/
-
-# macOS (Apple Silicon)
-curl -L https://github.com/jhheider/govee-tui/releases/latest/download/govee-tui-macos-aarch64.tar.gz | tar xz
-sudo mv govee-tui /usr/local/bin/
-```
 
 ### From Source
 
@@ -49,31 +34,29 @@ cargo build --release
 sudo cp target/release/govee-tui /usr/local/bin/
 ```
 
+### From Pre-built Binaries
+
+Once releases are published, binaries for Linux (x86_64) and macOS (Intel/Apple Silicon) will be attached to [GitHub releases](https://github.com/jhheider/govee-tui/releases).
+
 ## Configuration
 
-On first run, a configuration file will be created at `~/.config/govee-tui/config.toml`:
+On first run, a configuration file is created at `~/.config/govee-tui/config.toml` (Linux) or `~/Library/Application Support/govee-tui/config.toml` (macOS):
 
 ```toml
 [api]
-key = "YOUR_API_KEY_HERE"  # Get from https://developer.govee.com
-timeout_ms = 5000
-retry_attempts = 3
+key = "YOUR_API_KEY_HERE"  # Get from the Govee Home app (see below)
+timeout_ms = 10000         # Per-request timeout
+retry_attempts = 3         # Retries for transport errors / 5xx (never 429)
 
 [ui]
-theme = "dark"
-emoji = true
-refresh_interval_ms = 5000
-
-[database]
-path = "~/.local/share/govee-tui/devices.db"
-cache_ttl_seconds = 300
+refresh_interval_ms = 30000  # Device-list auto-refresh (minimum 10000)
 ```
 
 ### Getting a Govee API Key
 
 1. Download the Govee Home app
 2. Go to Settings → About Us → Apply for API Key
-3. Follow the instructions to receive your key via email
+3. Follow the instructions to receive your key via email (this can take a little while — it's an application, not an instant token)
 4. Add the key to your config file
 
 ## Usage
@@ -94,25 +77,30 @@ govee-tui
 
 #### Device List (when focused)
 - `↑/k` / `↓/j` - Navigate device list
+- `Space` - Toggle power on the selected device
 - `Enter` - Focus detail pane
 
 #### Device Detail (when focused)
 - `Esc` - Back to list
 - `Space` - Toggle power
 - `↑/k` / `↓/j` - Brightness ±10%
-- `Shift+↑` / `Shift+↓` (or `K` / `J`) - Brightness ±5% (fine-grained)
-- `c` - Open RGB color picker
+- `Shift+↑/↓` (or `K` / `J`) - Brightness ±5% (fine-grained)
+- `←/h` / `→/l` - Color temperature ±500K (warm ← → cool)
+- `Shift+←/→` (or `H` / `L`) - Color temperature ±100K (fine-grained)
+- `c` - Open color picker
+- `s` - Open scene picker
 
 #### Color Picker
-- `Tab` - Toggle between RGB editor and named-color Browser
-- RGB mode:
-  - `↑` / `↓` - Switch R/G/B channel
-  - `←` / `→` - Adjust selected channel ±10
-- Browser mode:
-  - `↑` / `↓` - Navigate colors within the current group
-  - `←` / `→` - Switch color group
+- `Tab` - Toggle between RGB editor and named-color browser
+- RGB mode: `↑/↓` switch channel, `←/→` adjust ±10
+- Browser mode: `↑/↓` navigate colors, `←/→` switch color group
 - `Enter` - Apply color
 - `Esc` - Cancel
+
+#### Scene Picker
+- `↑/k` / `↓/j` - Browse scenes (DIY scenes are tagged)
+- `Enter` - Apply scene
+- `Esc` - Close
 
 ### CLI Mode
 
@@ -148,63 +136,33 @@ govee-tui control "Desk Lamp" temp 4000
 
 ### Direct API Testing (Developer Scripts)
 
-For debugging and testing the Govee API directly without the TUI, use the included bash scripts:
+For debugging and testing the Govee API directly without the TUI, use the included bash scripts (require `curl` and `jq`):
 
 ```bash
-# Interactive test menu
-./scripts/test-api.sh
-
-# List all devices (saves to /tmp/govee-devices.json)
-./scripts/get-devices.sh
-
-# Get device state
-./scripts/get-device-state.sh "AA:BB:CC:DD:EE:FF:11:22" "H6159"
-
-# Control device
-./scripts/control-device.sh "AA:BB:CC:DD:EE:FF:11:22" "H6159" on
-./scripts/control-device.sh "AA:BB:CC:DD:EE:FF:11:22" "H6159" brightness:75
-./scripts/control-device.sh "AA:BB:CC:DD:EE:FF:11:22" "H6159" color:255,128,0
+./scripts/test-api.sh                 # Interactive test menu
+./scripts/get-devices.sh              # List all devices
+./scripts/get-device-state.sh <id> <sku>
+./scripts/control-device.sh <id> <sku> on|brightness:75|color:255,128,0
 ```
-
-**Requirements:** `curl` and `jq`
 
 See [scripts/README.md](scripts/README.md) for full documentation.
 
-**Use cases:**
-- Debug missing devices issue (compare new vs legacy endpoints)
-- Test API without building the app
-- Verify API key and permissions
-- Quick device control from command line
-- CI/CD integration testing
-
 ## Supported Commands
 
-| Command | Description | Range |
-|---------|-------------|-------|
-| `turn` | Power on/off | `on`, `off` |
-| `brightness` | Set brightness | 0-100% |
-| `color` | Set RGB color | 0-255 per channel |
-| `temp` | Set color temperature (CLI only) | 2000-9000K |
+| Command | Description | Range | TUI | CLI |
+|---------|-------------|-------|-----|-----|
+| `turn` | Power on/off | `on`, `off` | ✓ | ✓ |
+| `brightness` | Set brightness | 0-100% | ✓ | ✓ |
+| `color` | Set RGB color | 0-255 per channel | ✓ | ✓ |
+| `temp` | Set color temperature | 2000-9000K | ✓ | ✓ |
+| scenes | Apply light/DIY scenes | per device | ✓ | — |
 
 ## Development
 
-### Building
-
 ```bash
-cargo build
-```
-
-### Testing
-
-```bash
-cargo test
-```
-
-### Linting
-
-```bash
-cargo fmt
-cargo clippy -- -D warnings
+cargo build                        # Build both crates (workspace)
+cargo test                         # Run all tests (incl. govee-api2 suite)
+cargo fmt && cargo clippy -- -D warnings
 ```
 
 ## Project Structure
@@ -214,40 +172,26 @@ govee-tui/
 ├── src/
 │   ├── main.rs          # Entry point + CLI args
 │   ├── config.rs        # Configuration management
-│   ├── api/             # Govee API client
-│   │   ├── mod.rs       # Client wrapper
-│   │   ├── models.rs    # Device models
-│   │   └── commands.rs  # Control commands
-│   ├── db/              # SQLite persistence
-│   │   ├── mod.rs       # Database connection
-│   │   ├── schema.rs    # Schema definitions
-│   │   └── cache.rs     # Caching layer
-│   └── ui/              # TUI interface
-│       ├── mod.rs       # App state & event loop
-│       ├── theme.rs     # Colors & emojis
-│       └── widgets/     # UI components
-├── .github/workflows/   # CI/CD pipelines
-└── Cargo.toml          # Dependencies
+│   ├── cache.rs         # Device-list cache (instant startup)
+│   ├── api/             # Thin wrapper over govee-api2
+│   └── ui/              # TUI: app state, event loop, widgets
+├── govee-api2/          # Bundled Govee v2 platform-API client (tested against a mock server)
+├── .github/workflows/   # CI, release, and security-audit pipelines
+└── Cargo.toml
 ```
 
 ## CI/CD
 
-The project uses GitHub Actions for continuous integration:
-
-- **Format Check**: `rustfmt` validation
-- **Lint**: `clippy` with strict warnings
-- **Test**: Unit and integration tests
-- **Build**: Cross-platform compilation (Linux, macOS)
-- **Release**: Automated binary releases on git tags
-- **Security Audit**: Weekly dependency security checks
+- **Format / Lint / Test**: `rustfmt`, `clippy -D warnings`, full test suite on Linux + macOS
+- **Release**: tag `v*.*.*` → binaries for Linux (musl) and macOS (x86_64 + aarch64)
+- **Security audit**: weekly `cargo audit`
 
 ## Roadmap
 
-Features on the wishlist but not yet implemented:
-
-- **Device search / filter** in the TUI (filter the device list by name)
-- **Multi-device selection** and batched commands (turn a whole room off, etc.)
-- **Color temperature control in the TUI** — the CLI already supports this via `govee-tui control <device> temp <kelvin>`
+- **LAN API support** — local UDP control: instant, offline, no API key, no rate limits. The one feature that changes the game vs. the phone app.
+- **Device search / filter** in the TUI
+- **Multi-device selection** and batched commands (turn a whole room off)
+- **Segmented color** — the API client already supports it; needs UI
 
 Issues and pull requests welcome.
 
@@ -255,8 +199,8 @@ Issues and pull requests welcome.
 
 Licensed under either of:
 
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE) or http://www.apache.org/licenses/LICENSE-2.0)
-- MIT license ([LICENSE-MIT](LICENSE) or http://opensource.org/licenses/MIT)
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 at your option.
 
@@ -273,5 +217,4 @@ Contributions are welcome! Please:
 ## Acknowledgments
 
 - Built with [ratatui](https://github.com/ratatui-org/ratatui)
-- Talks to Govee devices via the bundled [`govee-api2`](govee-api2/) crate in this repo — a small wrapper around Govee's v2 router API
-- Inspired by the need for a clean terminal interface for smart home control
+- Talks to Govee devices via the bundled [`govee-api2`](govee-api2/) crate in this repo — a client for Govee's v2 platform API with scenes, segments, retry, and rate-limit handling

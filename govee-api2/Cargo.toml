@@ -2,7 +2,7 @@
 name = "govee-api2"
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name <you@example.com>"]
+authors = ["Jacob Heider <jhheider@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "Rust client for Govee's v2 router-based API with support for devices and groups"
 repository = "https://github.com/jhheider/govee-tui"
@@ -10,11 +10,12 @@ keywords = ["govee", "smart-home", "iot", "api-client"]
 categories = ["api-bindings"]
 
 [dependencies]
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-thiserror = "1.0"
-tokio = { version = "1.0", features = ["macros"] }
+thiserror = "2.0"
+tokio = { version = "1.0", features = ["time"] }
 
 [dev-dependencies]
-tokio-test = "0.4"
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread", "time"] }
+wiremock = "0.6"

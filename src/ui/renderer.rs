@@ -15,11 +15,20 @@ impl App {
                 Modal::ColorPicker(picker) => {
                     widgets::color_picker::render(picker, &self.theme, frame);
                 }
+                Modal::ScenePicker(picker) => {
+                    // Render the main layout behind the popup for context
+                    self.render_main(frame);
+                    widgets::scene_picker::render(picker, &self.theme, frame);
+                }
                 _ => {}
             }
             return;
         }
 
+        self.render_main(frame);
+    }
+
+    fn render_main(&self, frame: &mut Frame) {
         // Always render the multi-pane layout
         let layout = MultiPaneLayout::new(frame);
 
@@ -40,6 +49,7 @@ impl App {
         };
         let device_list = widgets::device_list::render_with_style(
             &self.devices,
+            &self.known_states,
             self.state.selected_index,
             &self.theme,
             list_style,
@@ -56,6 +66,7 @@ impl App {
             widgets::detail_view::render_with_style(
                 device,
                 self.state.device_state.as_ref(),
+                self.state_loading,
                 &self.theme,
                 frame,
                 layout.device_detail,
@@ -106,20 +117,37 @@ impl App {
             "".to_string(),
             "═══ DEVICE LIST (when focused) ═══".to_string(),
             "  ↑/↓, j/k    Navigate devices".to_string(),
+            "  Space       Toggle power ON/OFF".to_string(),
             "  Enter       Focus detail pane".to_string(),
             "".to_string(),
-            "═══ DEVICE DETAIL (when focused) ===".to_string(),
+            "═══ DEVICE DETAIL (when focused) ═══".to_string(),
             "  Space       Toggle power ON/OFF".to_string(),
-            "  ↑/↓, j/k    Adjust brightness ±10%".to_string(),
+            "  ↑/↓, k/j    Adjust brightness ±10%".to_string(),
             "  Shift+↑/↓   Adjust brightness ±5% (fine control)".to_string(),
+            "  ←/→, h/l    Color temperature ±500K (warm ← → cool)".to_string(),
+            "  Shift+←/→   Color temperature ±100K (fine control)".to_string(),
             "  c           Open color picker".to_string(),
+            "  s           Open scene picker".to_string(),
             "  Esc         Back to list focus".to_string(),
             "".to_string(),
-            "═══ COLOR PICKER ═══".to_string(),
-            "  Tab         Switch R/G/B channel".to_string(),
-            "  ↑/↓         Adjust value".to_string(),
+            "═══ COLOR PICKER (RGB mode) ═══".to_string(),
+            "  ↑/↓         Switch R/G/B channel".to_string(),
+            "  ←/→         Adjust channel ±10".to_string(),
+            "  Tab         Switch to color browser".to_string(),
             "  Enter       Apply color".to_string(),
             "  Esc         Cancel".to_string(),
+            "".to_string(),
+            "═══ COLOR PICKER (browser mode) ═══".to_string(),
+            "  ↑/↓         Browse colors".to_string(),
+            "  ←/→         Switch color group".to_string(),
+            "  Tab         Switch to RGB editor".to_string(),
+            "  Enter       Apply selected color".to_string(),
+            "  Esc         Cancel".to_string(),
+            "".to_string(),
+            "═══ SCENE PICKER ═══".to_string(),
+            "  ↑/↓, j/k    Browse scenes".to_string(),
+            "  Enter       Apply scene".to_string(),
+            "  Esc         Close".to_string(),
             "".to_string(),
             "═══ VISUAL CUES ═══".to_string(),
             "  Blue border   = Focused pane".to_string(),

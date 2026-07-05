@@ -1,6 +1,7 @@
 use super::focus::Focus;
 use crate::api::models::DeviceState;
 use crate::ui::widgets::color_picker::ColorPicker;
+use crate::ui::widgets::scene_picker::ScenePicker;
 
 /// Modal overlays that can appear on top of the main view
 #[derive(Debug, Clone, PartialEq)]
@@ -8,6 +9,7 @@ pub enum Modal {
     None,
     Help,
     ColorPicker(ColorPicker),
+    ScenePicker(ScenePicker),
 }
 
 /// Complete application UI state
@@ -24,10 +26,10 @@ pub struct AppState {
     /// Active modal overlay
     pub modal: Modal,
 
-    /// Status message (green, temporary)
+    /// Status message (green; expired after a few seconds by App::tick)
     pub status_message: Option<String>,
 
-    /// Error message (red, persistent until cleared)
+    /// Error message (red, persists until the next successful action)
     pub error_message: Option<String>,
 }
 

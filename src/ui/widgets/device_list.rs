@@ -1,14 +1,17 @@
+use std::collections::HashMap;
+
 use ratatui::{
     style::Style,
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem},
 };
 
-use crate::api::Device;
+use crate::api::{models::DeviceState, Device};
 use crate::ui::theme::{Emoji, Theme};
 
 pub fn render_with_style<'a>(
     devices: &'a [Device],
+    known_states: &HashMap<String, DeviceState>,
     selected_index: usize,
     theme: &'a Theme,
     border_style: Style,
@@ -23,10 +26,13 @@ pub fn render_with_style<'a>(
                 Emoji::LIGHT
             };
 
-            let status_emoji = if device.controllable {
-                Emoji::SUCCESS
-            } else {
-                "⚪"
+            // Last confirmed power state, if we've seen one
+            let power = known_states.get(&device.id).map(|s| s.power);
+            let status_emoji = match (power, device.controllable) {
+                (Some(true), _) => Emoji::POWER_ON,
+                (Some(false), _) => Emoji::POWER_OFF,
+                (None, true) => "·",
+                (None, false) => "⚪",
             };
 
             let content = Line::from(vec![

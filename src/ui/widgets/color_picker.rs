@@ -210,6 +210,9 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
 
     let preview = Paragraph::new(vec![
         Line::from(spaced_name),
+        Line::from(crate::ui::theme::color_swatch(
+            picker.r, picker.g, picker.b, 24,
+        )),
         Line::from(rgb_boxes(picker.r, picker.g, picker.b)),
         Line::from(format!(
             "RGB({:3},{:3},{:3})  #{:02X}{:02X}{:02X}",
@@ -284,9 +287,9 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
                             Style::default()
                         };
 
-                        // Simple emoji swatch based on color group
                         ListItem::new(Line::from(vec![
-                            Span::styled(format!("{}  ", group.emoji), style),
+                            crate::ui::theme::color_swatch(rgb[0], rgb[1], rgb[2], 3),
+                            Span::styled("  ", style),
                             Span::styled(format!("{spaced:<25}"), style),
                             Span::styled(
                                 format!("RGB({:3},{:3},{:3})", rgb[0], rgb[1], rgb[2]),
