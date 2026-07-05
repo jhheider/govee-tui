@@ -1,13 +1,15 @@
 //! # govee-api2
 //!
-//! A Rust client for Govee's v2 router-based API.
+//! A Rust client for Govee's v2 router-based platform API
+//! (`https://openapi.api.govee.com`).
 //!
-//! This crate provides a complete implementation of the Govee API v2 endpoints,
-//! including support for:
-//! - Device discovery and listing
-//! - Device groups
-//! - Device control (power, brightness, color, color temperature)
+//! Supported:
+//! - Device and group discovery
 //! - Device state queries
+//! - Device control (power, brightness, color, color temperature)
+//! - Dynamic light scenes and DIY scenes (list + activate)
+//! - Per-segment color and brightness for segmented lights
+//! - Configurable timeout and retry with backoff, typed rate-limit errors
 //!
 //! ## Example
 //!
@@ -24,8 +26,8 @@
 //!
 //!     // Control a device
 //!     if let Some(device) = devices.first() {
-//!         client.turn_on(&device.device).await?;
-//!         client.set_brightness(&device.device, 80).await?;
+//!         client.turn_on(&device.device, &device.sku).await?;
+//!         client.set_brightness(&device.device, &device.sku, 80).await?;
 //!     }
 //!
 //!     Ok(())
@@ -36,6 +38,11 @@ pub mod client;
 pub mod error;
 pub mod types;
 
-pub use client::GoveeClient;
+/// Compile the README's code examples as doctests.
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+struct ReadmeDoctests;
+
+pub use client::{ClientConfig, GoveeClient};
 pub use error::{Error, Result};
 pub use types::*;

@@ -3,8 +3,8 @@ use clap::{Parser, Subcommand};
 use tracing::info;
 
 mod api;
+mod cache;
 mod config;
-mod db;
 mod ui;
 
 #[derive(Parser)]
@@ -90,8 +90,6 @@ async fn main() -> Result<()> {
         eprintln!();
         eprintln!("  [api]");
         eprintln!("  key = \"your-actual-api-key-here\"");
-        eprintln!("  timeout_ms = 5000");
-        eprintln!("  retry_attempts = 3");
         eprintln!();
         eprintln!("To get a Govee API key:");
         eprintln!("  1. Download the Govee Home app");
@@ -106,16 +104,13 @@ async fn main() -> Result<()> {
 
     info!("Starting govee-tui v{}", env!("CARGO_PKG_VERSION"));
 
-    // Initialize database
-    let db = db::Database::new(&config.database.path)?;
-
-    // Initialize API client
-    let client = api::Client::new(&config.api.key)?;
+    // Initialize API client (config carries timeout and retry policy)
+    let client = api::Client::new(&config.api)?;
 
     // Execute command
     match cli.command {
         None | Some(Commands::Tui) => {
-            ui::run(client, db, config).await?;
+            ui::run(client, config).await?;
         }
         Some(Commands::Devices) => {
             cmd_list_devices(&client).await?;
@@ -221,7 +216,8 @@ async fn cmd_device_status(client: &api::Client, device_query: &str) -> Result<(
                 );
             }
 
-            if let Some(temp) = state.color_temp {
+            // 0K means the device is in color mode, not temperature mode
+            if let Some(temp) = state.color_temp.filter(|t| *t > 0) {
                 println!("   Color Temp: {temp}K");
             }
         }
@@ -310,10 +306,11 @@ fn find_device<'a>(devices: &'a [api::Device], query: &str) -> Result<&'a api::D
 }
 
 fn truncate(s: &str, max_len: usize) -> String {
-    if s.len() <= max_len {
+    if s.chars().count() <= max_len {
         s.to_string()
     } else {
-        format!("{}...", &s[..max_len - 3])
+        let cut: String = s.chars().take(max_len.saturating_sub(3)).collect();
+        format!("{cut}...")
     }
 }
 

@@ -10,7 +10,6 @@ use crate::ui::theme::{Emoji, Theme};
 
 pub fn render(devices: &[Device], loading: bool, theme: &Theme, frame: &mut Frame, area: Rect) {
     let (total, groups, individuals) = count_devices(devices);
-    let online = devices.iter().filter(|d| d.online).count();
     let controllable = devices.iter().filter(|d| d.controllable).count();
 
     let status = if loading {
@@ -29,11 +28,6 @@ pub fn render(devices: &[Device], loading: bool, theme: &Theme, frame: &mut Fram
             Span::styled(
                 format!("({groups} 📦 groups, {individuals} 💡 devices)"),
                 theme.dim,
-            ),
-            Span::raw("  "),
-            Span::styled(
-                format!("Online: {online}"),
-                if online > 0 { theme.success } else { theme.dim },
             ),
             Span::raw("  "),
             Span::styled(format!("Controllable: {controllable}"), theme.text),

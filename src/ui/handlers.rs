@@ -51,6 +51,9 @@ impl App {
             KeyCode::Down | KeyCode::Char('j') => {
                 self.move_selection(1);
             }
+            KeyCode::Char(' ') => {
+                self.toggle_power();
+            }
             KeyCode::Enter => {
                 self.state.focus = Focus::Detail;
                 self.request_load_device_state();
@@ -67,10 +70,7 @@ impl App {
 
             // Power control
             (KeyCode::Char(' '), _) => {
-                if let Some(state) = &self.state.device_state {
-                    let new_power = !state.power;
-                    self.request_toggle_power(new_power);
-                }
+                self.toggle_power();
             }
 
             // Brightness control - SHIFT for fine adjustment
@@ -85,6 +85,26 @@ impl App {
             }
             (KeyCode::Down, _) | (KeyCode::Char('j'), _) => {
                 self.adjust_brightness(-10);
+            }
+
+            // Color temperature - left is warmer, right is cooler;
+            // SHIFT (or H/L) for fine adjustment
+            (KeyCode::Left, KeyModifiers::SHIFT) | (KeyCode::Char('H'), _) => {
+                self.adjust_color_temp(-100);
+            }
+            (KeyCode::Right, KeyModifiers::SHIFT) | (KeyCode::Char('L'), _) => {
+                self.adjust_color_temp(100);
+            }
+            (KeyCode::Left, _) | (KeyCode::Char('h'), _) => {
+                self.adjust_color_temp(-500);
+            }
+            (KeyCode::Right, _) | (KeyCode::Char('l'), _) => {
+                self.adjust_color_temp(500);
+            }
+
+            // Scene picker
+            (KeyCode::Char('s'), _) => {
+                self.open_scene_picker();
             }
 
             // Color control
@@ -181,20 +201,31 @@ impl App {
                     _ => {}
                 }
             }
+            Modal::ScenePicker(_) => match key {
+                KeyCode::Esc => {
+                    self.state.close_modal();
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    if let Modal::ScenePicker(ref mut picker) = self.state.modal {
+                        picker.prev();
+                    }
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    if let Modal::ScenePicker(ref mut picker) = self.state.modal {
+                        picker.next();
+                    }
+                }
+                KeyCode::Enter => {
+                    self.apply_selected_scene();
+                }
+                _ => {}
+            },
             _ => {
                 // Close other modals with Esc
                 if matches!(key, KeyCode::Esc) {
                     self.state.close_modal();
                 }
             }
-        }
-    }
-
-    fn adjust_brightness(&mut self, delta: i32) {
-        if let Some(state) = &self.state.device_state {
-            let current = state.brightness.unwrap_or(50) as i32;
-            let new_brightness = (current + delta).clamp(0, 100) as u8;
-            self.request_apply_brightness(new_brightness);
         }
     }
 }

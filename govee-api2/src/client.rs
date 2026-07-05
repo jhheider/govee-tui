@@ -1,63 +1,81 @@
 use crate::error::{Error, Result};
 use crate::types::*;
+use serde::de::DeserializeOwned;
 use serde_json::json;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const API_BASE: &str = "https://openapi.api.govee.com";
+
+/// Base delay for exponential retry backoff (doubles per attempt).
+const RETRY_BASE_DELAY: Duration = Duration::from_millis(100);
+
+/// Configuration for a [`GoveeClient`].
+#[derive(Debug, Clone)]
+pub struct ClientConfig {
+    /// Per-request timeout (default: 10 seconds)
+    pub timeout: Duration,
+
+    /// Number of retries after a failed attempt, for transport errors and
+    /// HTTP 5xx responses (default: 3). Rate-limit (429) responses are
+    /// never retried.
+    pub retry_attempts: u32,
+
+    /// API base URL. Override for testing against a mock server
+    /// (default: `https://openapi.api.govee.com`).
+    pub base_url: String,
+}
+
+impl Default for ClientConfig {
+    fn default() -> Self {
+        Self {
+            timeout: Duration::from_secs(10),
+            retry_attempts: 3,
+            base_url: API_BASE.to_string(),
+        }
+    }
+}
 
 /// Govee API client for the v2 router-based endpoints
 #[derive(Clone)]
 pub struct GoveeClient {
     api_key: String,
     client: reqwest::Client,
+    config: ClientConfig,
 }
 
 impl GoveeClient {
-    /// Create a new Govee API client
+    /// Create a new Govee API client with default configuration
+    /// (10 second timeout, 3 retries).
     pub fn new(api_key: impl Into<String>) -> Self {
+        Self::with_config(api_key, ClientConfig::default())
+    }
+
+    /// Create a new Govee API client with a custom configuration.
+    pub fn with_config(api_key: impl Into<String>, config: ClientConfig) -> Self {
+        let client = reqwest::Client::builder()
+            .timeout(config.timeout)
+            .build()
+            .expect("failed to build reqwest client");
+
         Self {
             api_key: api_key.into(),
-            client: reqwest::Client::new(),
+            client,
+            config,
         }
     }
 
     /// List all devices and groups
     pub async fn get_devices(&self) -> Result<Vec<Device>> {
-        let url = format!("{}/router/api/v1/user/devices", API_BASE);
+        let response = self.request("/router/api/v1/user/devices", None).await?;
+        let api_response: ApiResponse<Vec<Device>> = Self::parse_json(response).await?;
 
-        let response = self
-            .client
-            .get(&url)
-            .header("Govee-API-Key", &self.api_key)
-            .header("Content-Type", "application/json")
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            return Err(Error::InvalidResponse(format!(
-                "HTTP {}: {}",
-                status, body
-            )));
-        }
-
-        let api_response: ApiResponse<Vec<Device>> = response.json().await?;
-
-        if api_response.code != 0 && api_response.code != 200 {
-            return Err(Error::Api {
-                code: api_response.code,
-                message: api_response.message,
-            });
-        }
+        Self::check_api_code(api_response.code, &api_response.message)?;
 
         Ok(api_response.data)
     }
 
     /// Get the current state of a device
     pub async fn get_device_state(&self, device_id: &str, sku: &str) -> Result<DeviceState> {
-        let url = format!("{}/router/api/v1/device/state", API_BASE);
-
         let payload = json!({
             "requestId": generate_request_id(),
             "payload": {
@@ -67,33 +85,59 @@ impl GoveeClient {
         });
 
         let response = self
-            .client
-            .post(&url)
-            .header("Govee-API-Key", &self.api_key)
-            .header("Content-Type", "application/json")
-            .json(&payload)
-            .send()
+            .request("/router/api/v1/device/state", Some(payload))
             .await?;
+        let api_response: DeviceStateResponse = Self::parse_json(response).await?;
 
-        if !response.status().is_success() {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            return Err(Error::InvalidResponse(format!(
-                "HTTP {}: {}",
-                status, body
-            )));
-        }
+        Self::check_api_code(api_response.code, &api_response.msg)?;
 
-        let api_response: DeviceStateResponse = response.json().await?;
+        Ok(DeviceState::from_capabilities(
+            api_response.payload.capabilities,
+        ))
+    }
 
-        if api_response.code != 0 && api_response.code != 200 {
-            return Err(Error::Api {
-                code: api_response.code,
-                message: api_response.msg,
-            });
-        }
+    /// List the dynamic light scenes available for a device
+    /// (`POST /router/api/v1/device/scenes`).
+    pub async fn get_dynamic_scenes(&self, device_id: &str, sku: &str) -> Result<Vec<Scene>> {
+        self.get_scene_list("/router/api/v1/device/scenes", device_id, sku)
+            .await
+    }
 
-        Ok(DeviceState::from_capabilities(api_response.payload.capabilities))
+    /// List the user-created DIY scenes available for a device
+    /// (`POST /router/api/v1/device/diy-scenes`).
+    pub async fn get_diy_scenes(&self, device_id: &str, sku: &str) -> Result<Vec<Scene>> {
+        self.get_scene_list("/router/api/v1/device/diy-scenes", device_id, sku)
+            .await
+    }
+
+    async fn get_scene_list(&self, path: &str, device_id: &str, sku: &str) -> Result<Vec<Scene>> {
+        let payload = json!({
+            "requestId": generate_request_id(),
+            "payload": {
+                "sku": sku,
+                "device": device_id
+            }
+        });
+
+        let response = self.request(path, Some(payload)).await?;
+        let api_response: ScenesResponse = Self::parse_json(response).await?;
+
+        Self::check_api_code(api_response.code, &api_response.msg)?;
+
+        Ok(Scene::from_capabilities(&api_response.payload.capabilities))
+    }
+
+    /// Activate a scene previously returned by [`Self::get_dynamic_scenes`]
+    /// or [`Self::get_diy_scenes`].
+    pub async fn set_scene(&self, device_id: &str, sku: &str, scene: &Scene) -> Result<()> {
+        self.send_control(
+            device_id,
+            sku,
+            &scene.capability_type,
+            &scene.instance,
+            scene.control_value(),
+        )
+        .await
     }
 
     /// Turn a device on
@@ -108,13 +152,16 @@ impl GoveeClient {
 
     /// Toggle device power
     async fn control_power(&self, device_id: &str, sku: &str, state: PowerState) -> Result<()> {
-        let value = match state {
-            PowerState::On => 1,
-            PowerState::Off => 0,
-        };
+        let value = if state.is_on() { 1 } else { 0 };
 
-        self.send_control(device_id, sku, "devices.capabilities.on_off", "powerSwitch", json!(value))
-            .await
+        self.send_control(
+            device_id,
+            sku,
+            "devices.capabilities.on_off",
+            "powerSwitch",
+            json!(value),
+        )
+        .await
     }
 
     /// Set device brightness (0-100)
@@ -132,21 +179,23 @@ impl GoveeClient {
 
     /// Set device color
     pub async fn set_color(&self, device_id: &str, sku: &str, color: Color) -> Result<()> {
-        // Pack RGB into single integer: (r << 16) | (g << 8) | b
-        let packed_rgb = ((color.r as i64) << 16) | ((color.g as i64) << 8) | (color.b as i64);
-
         self.send_control(
             device_id,
             sku,
             "devices.capabilities.color_setting",
             "colorRgb",
-            json!(packed_rgb),
+            json!(color.to_packed()),
         )
         .await
     }
 
     /// Set color temperature in Kelvin (2000-9000)
-    pub async fn set_color_temperature(&self, device_id: &str, sku: &str, kelvin: i32) -> Result<()> {
+    pub async fn set_color_temperature(
+        &self,
+        device_id: &str,
+        sku: &str,
+        kelvin: i32,
+    ) -> Result<()> {
         let kelvin = kelvin.clamp(2000, 9000);
         self.send_control(
             device_id,
@@ -154,6 +203,57 @@ impl GoveeClient {
             "devices.capabilities.color_setting",
             "colorTemperatureK",
             json!(kelvin),
+        )
+        .await
+    }
+
+    /// Set the color of specific segments of a segmented light.
+    ///
+    /// `segments` are zero-based segment indices as advertised by the
+    /// device's `segmentedColorRgb` capability.
+    pub async fn set_segment_color(
+        &self,
+        device_id: &str,
+        sku: &str,
+        segments: &[u8],
+        r: u8,
+        g: u8,
+        b: u8,
+    ) -> Result<()> {
+        let value = json!({
+            "segment": segments,
+            "rgb": Color::new(r, g, b).to_packed(),
+        });
+
+        self.send_control(
+            device_id,
+            sku,
+            "devices.capabilities.segment_color_setting",
+            "segmentedColorRgb",
+            value,
+        )
+        .await
+    }
+
+    /// Set the brightness (0-100) of specific segments of a segmented light.
+    pub async fn set_segment_brightness(
+        &self,
+        device_id: &str,
+        sku: &str,
+        segments: &[u8],
+        brightness: u8,
+    ) -> Result<()> {
+        let value = json!({
+            "segment": segments,
+            "brightness": brightness.min(100),
+        });
+
+        self.send_control(
+            device_id,
+            sku,
+            "devices.capabilities.segment_color_setting",
+            "segmentedBrightness",
+            value,
         )
         .await
     }
@@ -167,8 +267,6 @@ impl GoveeClient {
         instance: &str,
         value: serde_json::Value,
     ) -> Result<()> {
-        let url = format!("{}/router/api/v1/device/control", API_BASE);
-
         let payload = ControlRequest {
             request_id: generate_request_id(),
             payload: ControlPayload {
@@ -181,43 +279,138 @@ impl GoveeClient {
                 },
             },
         };
+        let payload = serde_json::to_value(&payload)?;
 
         let response = self
-            .client
-            .post(&url)
-            .header("Govee-API-Key", &self.api_key)
-            .header("Content-Type", "application/json")
-            .json(&payload)
-            .send()
+            .request("/router/api/v1/device/control", Some(payload))
             .await?;
+        let control_response: ControlResponse = Self::parse_json(response).await?;
 
-        if !response.status().is_success() {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            return Err(Error::InvalidResponse(format!(
-                "HTTP {}: {}",
-                status, body
-            )));
-        }
-
-        let control_response: ControlResponse = response.json().await?;
-
-        if control_response.code != 0 && control_response.code != 200 {
-            return Err(Error::Api {
-                code: control_response.code,
-                message: control_response.msg,
-            });
-        }
+        Self::check_api_code(control_response.code, &control_response.msg)?;
 
         Ok(())
     }
+
+    /// Perform a request with retry/backoff. `body: None` sends a GET,
+    /// `Some(json)` a POST.
+    ///
+    /// Transport errors and HTTP 5xx responses are retried up to
+    /// `retry_attempts` times with exponential backoff; 429 responses are
+    /// surfaced immediately as [`Error::RateLimited`].
+    async fn request(
+        &self,
+        path: &str,
+        body: Option<serde_json::Value>,
+    ) -> Result<reqwest::Response> {
+        let url = format!("{}{}", self.config.base_url, path);
+        let mut last_error: Option<Error> = None;
+
+        for attempt in 0..=self.config.retry_attempts {
+            if attempt > 0 {
+                tokio::time::sleep(RETRY_BASE_DELAY * 2u32.pow(attempt - 1)).await;
+            }
+
+            let request = match &body {
+                Some(body) => self.client.post(&url).json(body),
+                None => self.client.get(&url),
+            }
+            .header("Govee-API-Key", &self.api_key)
+            .header("Content-Type", "application/json");
+
+            match request.send().await {
+                Ok(response) => {
+                    let status = response.status();
+
+                    if status.is_success() {
+                        return Ok(response);
+                    }
+
+                    if status.is_server_error() {
+                        // Retryable
+                        last_error = Some(Error::Server {
+                            status: status.as_u16(),
+                        });
+                        continue;
+                    }
+
+                    // Non-retryable client errors
+                    return Err(match status.as_u16() {
+                        401 | 403 => Error::InvalidApiKey,
+                        429 => Error::RateLimited {
+                            retry_after_secs: parse_retry_after(response.headers()),
+                        },
+                        _ => {
+                            let body = response.text().await.unwrap_or_default();
+                            Error::InvalidResponse(format!("HTTP {}: {}", status, body))
+                        }
+                    });
+                }
+                Err(err) => {
+                    // Transport error (connection failure, timeout, ...):
+                    // retryable
+                    last_error = Some(Error::Request(err));
+                }
+            }
+        }
+
+        Err(last_error.unwrap_or_else(|| {
+            Error::InvalidResponse("request failed without a recorded error".to_string())
+        }))
+    }
+
+    async fn parse_json<T: DeserializeOwned>(response: reqwest::Response) -> Result<T> {
+        Ok(response.json().await?)
+    }
+
+    fn check_api_code(code: i32, message: &str) -> Result<()> {
+        if code != 0 && code != 200 {
+            return Err(Error::Api {
+                code,
+                message: message.to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+/// Extract a retry delay in seconds from rate-limit response headers.
+///
+/// Govee does not document specific headers for the platform API, so this
+/// checks the standard `Retry-After` plus the `X-RateLimit-Reset` /
+/// `API-RateLimit-Reset` variants used by the older Govee developer API
+/// (which carry a UTC epoch timestamp).
+fn parse_retry_after(headers: &reqwest::header::HeaderMap) -> Option<u64> {
+    if let Some(secs) = header_u64(headers, "Retry-After") {
+        return Some(secs);
+    }
+
+    for name in ["X-RateLimit-Reset", "API-RateLimit-Reset"] {
+        if let Some(value) = header_u64(headers, name) {
+            // Values this large are epoch timestamps; convert to a delta.
+            return Some(if value > 1_000_000_000 {
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs();
+                value.saturating_sub(now)
+            } else {
+                value
+            });
+        }
+    }
+
+    None
+}
+
+fn header_u64(headers: &reqwest::header::HeaderMap, name: &str) -> Option<u64> {
+    headers.get(name)?.to_str().ok()?.trim().parse().ok()
 }
 
 fn generate_request_id() -> String {
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
-        .as_millis();
+        .as_nanos();
     format!("rust-{}", timestamp)
 }
 
@@ -229,6 +422,24 @@ mod tests {
     fn test_client_creation() {
         let client = GoveeClient::new("test-key");
         assert_eq!(client.api_key, "test-key");
+        assert_eq!(client.config.timeout, Duration::from_secs(10));
+        assert_eq!(client.config.retry_attempts, 3);
+        assert_eq!(client.config.base_url, API_BASE);
+    }
+
+    #[test]
+    fn test_client_with_config() {
+        let client = GoveeClient::with_config(
+            "test-key",
+            ClientConfig {
+                timeout: Duration::from_millis(250),
+                retry_attempts: 0,
+                base_url: "http://localhost:1234".to_string(),
+            },
+        );
+        assert_eq!(client.config.timeout, Duration::from_millis(250));
+        assert_eq!(client.config.retry_attempts, 0);
+        assert_eq!(client.config.base_url, "http://localhost:1234");
     }
 
     #[test]
@@ -237,5 +448,31 @@ mod tests {
         let id2 = generate_request_id();
         assert!(id1.starts_with("rust-"));
         assert_ne!(id1, id2);
+    }
+
+    #[test]
+    fn test_parse_retry_after_seconds() {
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert("Retry-After", "30".parse().unwrap());
+        assert_eq!(parse_retry_after(&headers), Some(30));
+    }
+
+    #[test]
+    fn test_parse_retry_after_epoch_reset() {
+        let mut headers = reqwest::header::HeaderMap::new();
+        let reset = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            + 60;
+        headers.insert("X-RateLimit-Reset", reset.to_string().parse().unwrap());
+        let secs = parse_retry_after(&headers).unwrap();
+        assert!((59..=61).contains(&secs), "expected ~60s, got {secs}");
+    }
+
+    #[test]
+    fn test_parse_retry_after_missing() {
+        let headers = reqwest::header::HeaderMap::new();
+        assert_eq!(parse_retry_after(&headers), None);
     }
 }
