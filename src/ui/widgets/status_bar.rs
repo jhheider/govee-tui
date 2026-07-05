@@ -15,10 +15,7 @@ pub fn render(
     area: Rect,
 ) {
     let lines = if let Some(err) = error_message {
-        vec![
-            Line::from(Span::styled("⚠️  ERROR", theme.error)),
-            Line::from(Span::styled(err.clone(), theme.error)),
-        ]
+        vec![Line::from(Span::styled(format!("⚠️ {err}"), theme.error))]
     } else if let Some(msg) = status_message {
         vec![Line::from(Span::styled(msg.clone(), theme.success))]
     } else {

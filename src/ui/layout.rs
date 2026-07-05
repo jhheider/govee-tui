@@ -20,9 +20,9 @@ impl MultiPaneLayout {
         let vertical_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(5), // Overview panel
+                Constraint::Length(4), // Overview panel (2 lines + borders)
                 Constraint::Min(10),   // Main content area (device list + detail)
-                Constraint::Length(4), // Status/error panel
+                Constraint::Length(3), // Status/error panel (1 line + borders)
                 Constraint::Length(3), // Footer with key bindings
             ])
             .split(area);

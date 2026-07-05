@@ -90,12 +90,12 @@ async fn main() -> Result<()> {
 
     // Validate API key
     if config.api.key.is_empty() || config.api.key == "YOUR_API_KEY_HERE" {
-        eprintln!("❌ Error: No Govee API key configured!");
+        eprintln!("❌ Error: No Govee API key configured");
         eprintln!();
-        eprintln!("A default config file has been created at:");
+        eprintln!("Config file:");
         eprintln!("  {}", config_path.display());
         eprintln!();
-        eprintln!("Please edit it and replace YOUR_API_KEY_HERE with your actual API key:");
+        eprintln!("Edit it and replace YOUR_API_KEY_HERE with your actual API key:");
         eprintln!();
         eprintln!("  [api]");
         eprintln!("  key = \"your-actual-api-key-here\"");
@@ -106,7 +106,8 @@ async fn main() -> Result<()> {
         eprintln!("  1. Download the Govee Home app");
         eprintln!("  2. Go to Settings → About Us → Apply for API Key");
         eprintln!("  3. Follow the email instructions");
-        eprintln!("  4. Run govee-tui again after updating the config");
+        eprintln!();
+        eprintln!("Then run govee-tui again.");
         eprintln!();
         eprintln!("Documentation: https://developer.govee.com");
         eprintln!();
@@ -157,14 +158,10 @@ async fn cmd_list_devices(client: &api::Client) -> Result<()> {
         "{:<4} {:<30} {:<20} {:<12} ID",
         "#", "Name", "Model", "Controllable"
     );
-    println!("{}", "=".repeat(100));
+    println!("{}", "=".repeat(72));
 
     for (i, device) in devices.iter().enumerate() {
-        let controllable = if device.controllable {
-            "✓ Yes"
-        } else {
-            "⚪ No"
-        };
+        let controllable = if device.controllable { "Yes" } else { "No" };
         println!(
             "{:<4} {:<30} {:<20} {:<12} {}",
             i + 1,
@@ -175,7 +172,6 @@ async fn cmd_list_devices(client: &api::Client) -> Result<()> {
         );
     }
 
-    println!("\n💡 Tip: Use `--verbose` flag to see debug info about API calls");
     Ok(())
 }
 

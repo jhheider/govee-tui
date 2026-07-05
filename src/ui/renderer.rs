@@ -13,6 +13,8 @@ impl App {
             match &self.state.modal {
                 Modal::Help => self.render_help_modal(frame),
                 Modal::ColorPicker(picker) => {
+                    // Render the main layout behind the popup for context
+                    self.render_main(frame);
                     widgets::color_picker::render(picker, &self.theme, frame);
                 }
                 Modal::ScenePicker(picker) => {
@@ -47,14 +49,16 @@ impl App {
         } else {
             self.theme.border
         };
-        let device_list = widgets::device_list::render_with_style(
+        widgets::device_list::render_with_style(
             &self.devices,
             &self.known_states,
             self.state.selected_index,
+            self.loading,
             &self.theme,
+            frame,
+            layout.device_list,
             list_style,
         );
-        frame.render_widget(device_list, layout.device_list);
 
         // Render device detail (right) with focus indicator
         let detail_style = if self.state.focus == Focus::Detail {
@@ -72,6 +76,19 @@ impl App {
                 layout.device_detail,
                 detail_style,
             );
+        } else {
+            use ratatui::widgets::{Block, Borders, Paragraph};
+            let placeholder = if self.loading {
+                "Loading…"
+            } else {
+                "No device selected"
+            };
+            let empty = Paragraph::new(placeholder).style(self.theme.dim).block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(detail_style),
+            );
+            frame.render_widget(empty, layout.device_detail);
         }
 
         // Render status/error panel (bottom-middle)
@@ -90,84 +107,88 @@ impl App {
     fn render_help_modal(&self, frame: &mut Frame) {
         use crate::ui::theme::Emoji;
         use ratatui::{
-            layout::Rect,
+            layout::{Constraint, Direction, Layout, Rect},
             widgets::{Block, Borders, Clear, Paragraph},
         };
 
-        // Center the modal
+        // Two columns of ~24 lines each; size the popup to fit
         let area = frame.area();
+        let width = area.width.min(84);
+        let height = area.height.min(28);
         let popup_area = Rect {
-            x: area.width / 6,
-            y: area.height / 10,
-            width: area.width * 2 / 3,
-            height: area.height * 4 / 5,
+            x: area.width.saturating_sub(width) / 2,
+            y: area.height.saturating_sub(height) / 2,
+            width,
+            height,
         };
 
-        // Clear the area
         frame.render_widget(Clear, popup_area);
 
-        let help_text = vec![
-            format!("{} GOVEE TUI - KEYBOARD SHORTCUTS", Emoji::HELP),
-            "".to_string(),
-            "═══ GLOBAL ═══".to_string(),
-            "  q           Quit application".to_string(),
-            "  ?           Show/hide this help".to_string(),
-            "  r           Refresh devices".to_string(),
-            "  Tab         Switch focus (List ↔ Detail)".to_string(),
-            "".to_string(),
-            "═══ DEVICE LIST (when focused) ═══".to_string(),
-            "  ↑/↓, j/k    Navigate devices".to_string(),
-            "  Space       Toggle power ON/OFF".to_string(),
-            "  Enter       Focus detail pane".to_string(),
-            "".to_string(),
-            "═══ DEVICE DETAIL (when focused) ═══".to_string(),
-            "  Space       Toggle power ON/OFF".to_string(),
-            "  ↑/↓, k/j    Adjust brightness ±10%".to_string(),
-            "  Shift+↑/↓   Adjust brightness ±5% (fine control)".to_string(),
-            "  ←/→, h/l    Color temperature ±500K (warm ← → cool)".to_string(),
-            "  Shift+←/→   Color temperature ±100K (fine control)".to_string(),
-            "  c           Open color picker".to_string(),
-            "  s           Open scene picker".to_string(),
-            "  Esc         Back to list focus".to_string(),
-            "".to_string(),
-            "═══ COLOR PICKER (RGB mode) ═══".to_string(),
-            "  ↑/↓         Switch R/G/B channel".to_string(),
-            "  ←/→         Adjust channel ±10".to_string(),
-            "  Tab         Switch to color browser".to_string(),
-            "  Enter       Apply color".to_string(),
-            "  Esc         Cancel".to_string(),
-            "".to_string(),
-            "═══ COLOR PICKER (browser mode) ═══".to_string(),
-            "  ↑/↓         Browse colors".to_string(),
-            "  ←/→         Switch color group".to_string(),
-            "  Tab         Switch to RGB editor".to_string(),
-            "  Enter       Apply selected color".to_string(),
-            "  Esc         Cancel".to_string(),
-            "".to_string(),
-            "═══ SCENE PICKER ═══".to_string(),
-            "  ↑/↓, j/k    Browse scenes".to_string(),
-            "  Enter       Apply scene".to_string(),
-            "  Esc         Close".to_string(),
-            "".to_string(),
-            "═══ VISUAL CUES ═══".to_string(),
-            "  Blue border   = Focused pane".to_string(),
-            "  📦            = Device group".to_string(),
-            "  💡            = Individual device".to_string(),
-            "  ✅ ON         = Power on".to_string(),
-            "  ⭕ OFF        = Power off".to_string(),
-            "".to_string(),
-            "Press any key to close...".to_string(),
+        let block = Block::default()
+            .title(format!(" {} Help ", Emoji::HELP))
+            .title_bottom(" press any key to close ")
+            .borders(Borders::ALL)
+            .border_style(self.theme.border_focused);
+        let inner = block.inner(popup_area);
+        frame.render_widget(block, popup_area);
+
+        let columns = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(inner);
+
+        let left = [
+            "═ GLOBAL ═",
+            " q          Quit",
+            " ?          This help",
+            " r          Refresh devices",
+            " Tab        Switch focus",
+            "",
+            "═ DEVICE LIST ═",
+            " ↑/↓, j/k   Navigate",
+            " Space      Toggle power",
+            " Enter      Detail pane",
+            "",
+            "═ DEVICE DETAIL ═",
+            " Space      Toggle power",
+            " ↑/↓, j/k   Brightness ±10%",
+            " Shift+↑/↓  Brightness ±5%",
+            " ←/→, h/l   Temp ±500K",
+            " Shift+←/→  Temp ±100K",
+            " c          Color picker",
+            " s          Scene picker",
+            " Esc        Back to list",
+        ];
+        let right = [
+            "═ COLOR PICKER (RGB) ═",
+            " ↑/↓        R/G/B channel",
+            " ←/→        Adjust ±10",
+            " Tab        Color browser",
+            " Enter      Apply",
+            "",
+            "═ COLOR PICKER (browser) ═",
+            " ↑/↓        Browse colors",
+            " ←/→        Switch group",
+            " Tab        RGB editor",
+            " Enter      Apply",
+            "",
+            "═ SCENE PICKER ═",
+            " ↑/↓, j/k   Browse scenes",
+            " Enter      Apply scene",
+            "",
+            "═ VISUAL CUES ═",
+            " cyan border  focused pane",
+            " 📦 group   💡 device",
+            " ✅ on  ⭕ off  · unknown",
         ];
 
-        let help_paragraph = Paragraph::new(help_text.join("\n"))
-            .style(self.theme.text)
-            .block(
-                Block::default()
-                    .title(format!(" {} Help ", Emoji::HELP))
-                    .borders(Borders::ALL)
-                    .border_style(self.theme.border_focused),
-            );
-
-        frame.render_widget(help_paragraph, popup_area);
+        frame.render_widget(
+            Paragraph::new(left.join("\n")).style(self.theme.text),
+            columns[0],
+        );
+        frame.render_widget(
+            Paragraph::new(right.join("\n")).style(self.theme.text),
+            columns[1],
+        );
     }
 }
