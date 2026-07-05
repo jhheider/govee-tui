@@ -52,6 +52,8 @@ retry_attempts = 3         # Retries for transport errors / 5xx (never 429)
 refresh_interval_ms = 30000  # Device-list auto-refresh (minimum 10000)
 ```
 
+The `GOVEE_API_KEY` environment variable takes precedence over the config file — handy for scripts and CI.
+
 ### Getting a Govee API Key
 
 1. Download the Govee Home app
@@ -132,6 +134,10 @@ govee-tui control "Strip" color 255 0 0  # Red
 
 # Set color temperature (2000-9000K)
 govee-tui control "Desk Lamp" temp 4000
+
+# List and apply light scenes (including your DIY scenes)
+govee-tui scenes "Floor Lamp"
+govee-tui control "Floor Lamp" scene "Movie"
 ```
 
 ### Direct API Testing (Developer Scripts)
@@ -155,7 +161,7 @@ See [scripts/README.md](scripts/README.md) for full documentation.
 | `brightness` | Set brightness | 0-100% | ✓ | ✓ |
 | `color` | Set RGB color | 0-255 per channel | ✓ | ✓ |
 | `temp` | Set color temperature | 2000-9000K | ✓ | ✓ |
-| scenes | Apply light/DIY scenes | per device | ✓ | — |
+| `scene` | Apply light/DIY scenes | per device | ✓ | ✓ |
 
 ## Development
 

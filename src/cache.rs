@@ -20,6 +20,9 @@ pub fn save_devices(devices: &[Device]) -> Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    std::fs::write(path, serde_json::to_string(devices)?)?;
+    // Write-then-rename so a crash mid-write can't leave a truncated file
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, serde_json::to_string(devices)?)?;
+    std::fs::rename(&tmp, &path)?;
     Ok(())
 }

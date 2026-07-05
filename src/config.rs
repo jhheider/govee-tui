@@ -49,13 +49,22 @@ impl Config {
             .or_else(Self::default_path)
             .context("No config file found")?;
 
-        if config_path.exists() {
+        let mut config = if config_path.exists() {
             let content =
                 std::fs::read_to_string(&config_path).context("Failed to read config file")?;
-            toml::from_str(&content).context("Failed to parse config file")
+            toml::from_str(&content).context("Failed to parse config file")?
         } else {
-            Self::create_default(&config_path)
+            Self::create_default(&config_path)?
+        };
+
+        // Environment variable takes precedence over the config file
+        if let Ok(key) = std::env::var("GOVEE_API_KEY") {
+            if !key.is_empty() {
+                config.api.key = key;
+            }
         }
+
+        Ok(config)
     }
 
     fn default_path() -> Option<PathBuf> {
