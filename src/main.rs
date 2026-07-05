@@ -38,6 +38,12 @@ enum Commands {
         device: String,
     },
 
+    /// List available light scenes for a device
+    Scenes {
+        /// Device name (fuzzy match) or exact ID
+        device: String,
+    },
+
     /// Control a device
     Control {
         /// Device name (fuzzy match) or exact ID
@@ -62,6 +68,9 @@ enum ControlCommand {
 
     /// Set color temperature (2000-9000K)
     Temp { kelvin: u16 },
+
+    /// Apply a light scene by name (see `scenes` for the list)
+    Scene { name: String },
 }
 
 #[tokio::main]
@@ -91,6 +100,8 @@ async fn main() -> Result<()> {
         eprintln!("  [api]");
         eprintln!("  key = \"your-actual-api-key-here\"");
         eprintln!();
+        eprintln!("(or set the GOVEE_API_KEY environment variable)");
+        eprintln!();
         eprintln!("To get a Govee API key:");
         eprintln!("  1. Download the Govee Home app");
         eprintln!("  2. Go to Settings → About Us → Apply for API Key");
@@ -117,6 +128,9 @@ async fn main() -> Result<()> {
         }
         Some(Commands::Status { device }) => {
             cmd_device_status(&client, &device).await?;
+        }
+        Some(Commands::Scenes { device }) => {
+            cmd_list_scenes(&client, &device).await?;
         }
         Some(Commands::Control { device, command }) => {
             cmd_control_device(&client, &device, command).await?;
@@ -246,6 +260,27 @@ async fn cmd_control_device(
     }
 
     let cmd = match command {
+        ControlCommand::Scene { name } => {
+            let scenes = client.get_scenes(&device.id, &device.model).await?;
+            let name_lower = name.to_lowercase();
+            let scene = scenes
+                .iter()
+                .find(|s| s.name.to_lowercase() == name_lower)
+                .or_else(|| {
+                    scenes
+                        .iter()
+                        .find(|s| s.name.to_lowercase().contains(&name_lower))
+                })
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "❌ No scene matching '{name}' on '{}' (try `govee-tui scenes \"{}\"`)",
+                        device.name,
+                        device.name
+                    )
+                })?;
+            println!("🎬 Applying scene '{}'...", scene.name);
+            Command::Scene(scene.clone())
+        }
         ControlCommand::Turn { state } => {
             let on = state.to_lowercase() == "on";
             println!(
@@ -274,6 +309,34 @@ async fn cmd_control_device(
         .await?;
 
     println!("✅ Command executed successfully!");
+    Ok(())
+}
+
+async fn cmd_list_scenes(client: &api::Client, device_query: &str) -> Result<()> {
+    println!("🔍 Searching for device: {device_query}\n");
+
+    let devices = client.get_devices().await?;
+    let device = find_device(&devices, device_query)?;
+
+    println!("🎬 Fetching scenes for {}...\n", device.name);
+    let scenes = client.get_scenes(&device.id, &device.model).await?;
+
+    if scenes.is_empty() {
+        println!("⚠️  No scenes available for this device");
+        return Ok(());
+    }
+
+    for scene in &scenes {
+        if scene.param_id.is_none() {
+            println!("  {}  (DIY)", scene.name);
+        } else {
+            println!("  {}", scene.name);
+        }
+    }
+    println!(
+        "\n💡 Apply one with: govee-tui control \"{}\" scene \"<name>\"",
+        device.name
+    );
     Ok(())
 }
 
