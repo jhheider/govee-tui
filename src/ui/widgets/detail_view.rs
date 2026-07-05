@@ -22,7 +22,7 @@ pub fn render_with_style(
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(3),
-            Constraint::Length(5),
+            Constraint::Length(4),
             Constraint::Length(4),
             Constraint::Length(4),
             Constraint::Min(0),
@@ -33,7 +33,7 @@ pub fn render_with_style(
     let unknown = if state_loading {
         format!("{} Loading…", Emoji::LOADING)
     } else {
-        "unknown — press Enter to load".to_string()
+        "unknown (enter loads)".to_string()
     };
 
     // Device header with emoji
@@ -65,27 +65,27 @@ pub fn render_with_style(
         unknown.clone()
     };
 
-    // Build capabilities list
+    // Build capabilities list (plain text — VS16 emoji shear some terminals)
     let mut caps = vec![];
     if device.supports_power {
-        caps.push("⚡Power");
+        caps.push("Power");
     }
     if device.supports_brightness {
-        caps.push("☀️Bright");
+        caps.push("Brightness");
     }
     if device.supports_color {
-        caps.push("🎨Color");
+        caps.push("Color");
     }
     if device.supports_color_temp {
-        caps.push("🌡️Temp");
+        caps.push("Temp");
     }
     if device.supports_scenes {
-        caps.push("🎬Scenes");
+        caps.push("Scenes");
     }
     let caps_str = if caps.is_empty() {
         "None".to_string()
     } else {
-        caps.join(" ")
+        caps.join(" · ")
     };
 
     let info = Paragraph::new(vec![
@@ -96,10 +96,6 @@ pub fn render_with_style(
         Line::from(vec![
             Span::raw("Capabilities: "),
             Span::styled(&caps_str, theme.highlight),
-        ]),
-        Line::from(vec![
-            Span::raw("Model: "),
-            Span::styled(&device.model, theme.dim),
         ]),
     ])
     .block(Block::default().borders(Borders::ALL).title("Info"));
@@ -173,14 +169,14 @@ pub fn render_with_style(
     if device.supports_power {
         help_lines.push(Line::from(vec![
             Span::styled("[space]", theme.highlight),
-            Span::raw(" Power On/Off"),
+            Span::raw(" power on/off"),
         ]));
     }
 
     if device.supports_brightness {
         help_lines.push(Line::from(vec![
             Span::styled("[↑↓]", theme.highlight),
-            Span::raw(" Brightness ±10%  "),
+            Span::raw(" brightness ±10%  "),
             Span::styled("[shift+↑↓]", theme.highlight),
             Span::raw(" ±5%"),
         ]));
@@ -189,7 +185,7 @@ pub fn render_with_style(
     if device.supports_color_temp {
         help_lines.push(Line::from(vec![
             Span::styled("[←→]", theme.highlight),
-            Span::raw(" Temp ±500K  "),
+            Span::raw(" temp ±500K  "),
             Span::styled("[shift+←→]", theme.highlight),
             Span::raw(" ±100K"),
         ]));
@@ -198,24 +194,22 @@ pub fn render_with_style(
     if device.supports_color {
         help_lines.push(Line::from(vec![
             Span::styled("[c]", theme.highlight),
-            Span::raw(" Color Picker ("),
-            Span::styled("enter", theme.highlight),
-            Span::raw(" to apply)"),
+            Span::raw(" color picker"),
         ]));
     }
 
     if device.supports_scenes {
         help_lines.push(Line::from(vec![
             Span::styled("[s]", theme.highlight),
-            Span::raw(" Scenes"),
+            Span::raw(" scenes"),
         ]));
     }
 
     help_lines.push(Line::from(vec![
         Span::styled("[esc]", theme.highlight),
-        Span::raw(" Back to List  "),
+        Span::raw(" back to list  "),
         Span::styled("[tab]", theme.highlight),
-        Span::raw(" Switch Focus"),
+        Span::raw(" switch focus"),
     ]));
 
     let help = Paragraph::new(help_lines).style(theme.text).block(

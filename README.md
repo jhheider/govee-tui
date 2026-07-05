@@ -94,13 +94,14 @@ govee-tui
 
 #### Color Picker
 - `Tab` - Toggle between RGB editor and named-color browser
-- RGB mode: `↑/↓` switch channel, `←/→` adjust ±10
+- RGB mode: `↑/↓` (or `k/j`) switch channel, `←/→` (or `h/l`) adjust ±10
 - Browser mode: `↑/↓` navigate colors, `←/→` switch color group
 - `Enter` - Apply color
 - `Esc` - Cancel
 
 #### Scene Picker
 - `↑/k` / `↓/j` - Browse scenes (DIY scenes are tagged)
+- `PgUp/PgDn`, `Home/End` - Jump through long scene lists
 - `Enter` - Apply scene
 - `Esc` - Close
 

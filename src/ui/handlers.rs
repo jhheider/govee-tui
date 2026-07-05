@@ -5,6 +5,12 @@ use crossterm::event::{KeyCode, KeyModifiers};
 
 impl App {
     pub fn handle_key(&mut self, key: KeyCode, modifiers: KeyModifiers) {
+        // Ctrl+C quits unconditionally, even with a modal open
+        if key == KeyCode::Char('c') && modifiers == KeyModifiers::CONTROL {
+            self.should_quit = true;
+            return;
+        }
+
         // Handle modals first
         if self.state.has_modal() {
             self.handle_modal_keys(key, modifiers);
@@ -13,7 +19,7 @@ impl App {
 
         // Global keys
         match (key, modifiers) {
-            (KeyCode::Char('q'), _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+            (KeyCode::Char('q'), _) => {
                 self.should_quit = true;
                 return;
             }
@@ -68,6 +74,12 @@ impl App {
                 self.state.focus = Focus::List;
             }
 
+            // Reload state on demand (also makes the "press Enter to load"
+            // hint true when this pane is focused)
+            (KeyCode::Enter, _) => {
+                self.request_load_device_state();
+            }
+
             // Power control
             (KeyCode::Char(' '), _) => {
                 self.toggle_power();
@@ -109,6 +121,10 @@ impl App {
 
             // Color control
             (KeyCode::Char('c'), _) => {
+                if !self.selected_device().is_some_and(|d| d.supports_color) {
+                    self.set_status("This device does not support color".to_string());
+                    return;
+                }
                 let (r, g, b) = self
                     .state
                     .device_state
@@ -163,7 +179,7 @@ impl App {
                     }
 
                     // Up/Down behavior depends on mode
-                    KeyCode::Up => {
+                    KeyCode::Up | KeyCode::Char('k') => {
                         if let Modal::ColorPicker(ref mut picker) = self.state.modal {
                             match picker.mode {
                                 ColorPickerMode::Rgb => picker.prev_channel(),
@@ -171,7 +187,7 @@ impl App {
                             }
                         }
                     }
-                    KeyCode::Down => {
+                    KeyCode::Down | KeyCode::Char('j') => {
                         if let Modal::ColorPicker(ref mut picker) = self.state.modal {
                             match picker.mode {
                                 ColorPickerMode::Rgb => picker.next_channel(),
@@ -181,7 +197,7 @@ impl App {
                     }
 
                     // Left/Right behavior depends on mode
-                    KeyCode::Left => {
+                    KeyCode::Left | KeyCode::Char('h') => {
                         if let Modal::ColorPicker(ref mut picker) = self.state.modal {
                             match picker.mode {
                                 ColorPickerMode::Rgb => picker.adjust(-10),
@@ -189,7 +205,7 @@ impl App {
                             }
                         }
                     }
-                    KeyCode::Right => {
+                    KeyCode::Right | KeyCode::Char('l') => {
                         if let Modal::ColorPicker(ref mut picker) = self.state.modal {
                             match picker.mode {
                                 ColorPickerMode::Rgb => picker.adjust(10),
@@ -213,6 +229,26 @@ impl App {
                 KeyCode::Down | KeyCode::Char('j') => {
                     if let Modal::ScenePicker(ref mut picker) = self.state.modal {
                         picker.next();
+                    }
+                }
+                KeyCode::PageUp => {
+                    if let Modal::ScenePicker(ref mut picker) = self.state.modal {
+                        picker.page_up();
+                    }
+                }
+                KeyCode::PageDown => {
+                    if let Modal::ScenePicker(ref mut picker) = self.state.modal {
+                        picker.page_down();
+                    }
+                }
+                KeyCode::Home => {
+                    if let Modal::ScenePicker(ref mut picker) = self.state.modal {
+                        picker.home();
+                    }
+                }
+                KeyCode::End => {
+                    if let Modal::ScenePicker(ref mut picker) = self.state.modal {
+                        picker.end();
                     }
                 }
                 KeyCode::Enter => {

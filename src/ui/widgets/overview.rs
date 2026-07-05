@@ -13,7 +13,7 @@ pub fn render(devices: &[Device], loading: bool, theme: &Theme, frame: &mut Fram
     let controllable = devices.iter().filter(|d| d.controllable).count();
 
     let status = if loading {
-        format!(" {} Loading...", Emoji::LOADING)
+        format!(" {} Loading…", Emoji::LOADING)
     } else {
         "".to_string()
     };

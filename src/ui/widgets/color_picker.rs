@@ -116,37 +116,35 @@ impl ColorPicker {
     }
 }
 
-/// Create proportional RGB visualization boxes
-fn rgb_boxes(r: u8, g: u8, b: u8) -> String {
-    let box_width = 5;
-    let r_filled = (r as usize * box_width) / 255;
-    let g_filled = (g as usize * box_width) / 255;
-    let b_filled = (b as usize * box_width) / 255;
-
-    format!(
-        "🔴[{}{}] 🟢[{}{}] 🔵[{}{}]",
-        "█".repeat(r_filled),
-        "░".repeat(box_width - r_filled),
-        "█".repeat(g_filled),
-        "░".repeat(box_width - g_filled),
-        "█".repeat(b_filled),
-        "░".repeat(box_width - b_filled)
-    )
-}
-
 pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
-    let area = frame.area();
+    use ratatui::{layout::Rect, widgets::Clear};
+
+    // Centered popup over the main view
+    let screen = frame.area();
+    let width = screen.width.min(72);
+    let height = if picker.mode == ColorPickerMode::Browser {
+        screen.height.min(28)
+    } else {
+        screen.height.min(16)
+    };
+    let area = Rect {
+        x: screen.width.saturating_sub(width) / 2,
+        y: screen.height.saturating_sub(height) / 2,
+        width,
+        height,
+    };
+    frame.render_widget(Clear, area);
 
     // Different layout based on mode
     let chunks = if picker.mode == ColorPickerMode::Browser {
-        // Browser mode: Title | Column selector | Preview | Color list | Help
+        // Browser mode: Title | Group selector | Preview | Color list | Help
         Layout::default()
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Length(3), // Title
-                Constraint::Length(3), // Column selector
-                Constraint::Length(6), // Preview (smaller)
-                Constraint::Min(10),   // Color list
+                Constraint::Length(3), // Group selector
+                Constraint::Length(4), // Preview
+                Constraint::Min(8),    // Color list
                 Constraint::Length(3), // Help
             ])
             .split(area)
@@ -156,8 +154,8 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Length(3), // Title
-                Constraint::Length(6), // Preview
-                Constraint::Min(10),   // RGB sliders
+                Constraint::Length(4), // Preview
+                Constraint::Length(5), // RGB sliders
                 Constraint::Length(3), // Help
             ])
             .split(area)
@@ -173,10 +171,10 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
         .block(Block::default().borders(Borders::ALL));
     frame.render_widget(title, chunks[0]);
 
-    // Column selector (Browser mode only)
+    // Group selector (Browser mode only)
     if picker.mode == ColorPickerMode::Browser {
         let groups = get_color_groups();
-        let mut columns = vec![Span::raw("RGB")];
+        let mut columns = vec![];
 
         for (i, group) in groups.iter().enumerate() {
             columns.push(Span::raw("  "));
@@ -209,11 +207,10 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
     };
 
     let preview = Paragraph::new(vec![
-        Line::from(spaced_name),
-        Line::from(crate::ui::theme::color_swatch(
-            picker.r, picker.g, picker.b, 24,
-        )),
-        Line::from(rgb_boxes(picker.r, picker.g, picker.b)),
+        Line::from(vec![
+            crate::ui::theme::color_swatch(picker.r, picker.g, picker.b, 24),
+            Span::raw(format!("  {spaced_name}")),
+        ]),
         Line::from(format!(
             "RGB({:3},{:3},{:3})  #{:02X}{:02X}{:02X}",
             picker.r, picker.g, picker.b, picker.r, picker.g, picker.b
@@ -248,21 +245,28 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
                 theme.text
             };
 
+            use ratatui::style::Color;
+            let bar = |value: u8, color: Color| {
+                Span::styled(
+                    "█".repeat((value as usize * 20) / 255),
+                    Style::default().fg(color),
+                )
+            };
             let sliders = Paragraph::new(vec![
                 Line::from(vec![
-                    Span::styled("🔴 Red:   ", r_style),
+                    Span::styled("Red:   ", r_style),
                     Span::raw(format!("{:3} ", picker.r)),
-                    Span::raw("█".repeat((picker.r as usize * 20) / 255)),
+                    bar(picker.r, Color::Red),
                 ]),
                 Line::from(vec![
-                    Span::styled("🟢 Green: ", g_style),
+                    Span::styled("Green: ", g_style),
                     Span::raw(format!("{:3} ", picker.g)),
-                    Span::raw("█".repeat((picker.g as usize * 20) / 255)),
+                    bar(picker.g, Color::Green),
                 ]),
                 Line::from(vec![
-                    Span::styled("🔵 Blue:  ", b_style),
+                    Span::styled("Blue:  ", b_style),
                     Span::raw(format!("{:3} ", picker.b)),
-                    Span::raw("█".repeat((picker.b as usize * 20) / 255)),
+                    bar(picker.b, Color::Blue),
                 ]),
             ])
             .block(Block::default().borders(Borders::ALL).title("RGB Channels"));
@@ -322,10 +326,10 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
 
     let help_text = match picker.mode {
         ColorPickerMode::Rgb => {
-            "[↑↓] Channel  [←→] Adjust ±10  [Tab] Browser  [Enter] Apply  [Esc] Cancel"
+            "[↑↓/jk] channel [←→/hl] ±10 [tab] browser [enter] apply [esc] cancel"
         }
         ColorPickerMode::Browser => {
-            "[↑↓] Colors  [←→] Groups  [Enter] Select  [Tab] RGB  [Esc] Cancel"
+            "[↑↓/jk] colors [←→/hl] groups [tab] rgb [enter] apply [esc] cancel"
         }
     };
 

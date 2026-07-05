@@ -50,6 +50,28 @@ impl ScenePicker {
         }
     }
 
+    pub fn page_up(&mut self) {
+        self.selected = self.selected.saturating_sub(10);
+    }
+
+    pub fn page_down(&mut self) {
+        if let Some(scenes) = &self.scenes {
+            if !scenes.is_empty() {
+                self.selected = (self.selected + 10).min(scenes.len() - 1);
+            }
+        }
+    }
+
+    pub fn home(&mut self) {
+        self.selected = 0;
+    }
+
+    pub fn end(&mut self) {
+        if let Some(scenes) = &self.scenes {
+            self.selected = scenes.len().saturating_sub(1);
+        }
+    }
+
     pub fn selected_scene(&self) -> Option<&Scene> {
         self.scenes.as_ref()?.get(self.selected)
     }
@@ -65,7 +87,12 @@ pub fn render(picker: &ScenePicker, theme: &Theme, frame: &mut Frame) {
     };
     frame.render_widget(Clear, popup);
 
-    let title = format!(" 🎬 Scenes — {} ", picker.device_name);
+    let title = match &picker.scenes {
+        Some(scenes) if !scenes.is_empty() => {
+            format!(" 🎬 Scenes — {} ({}) ", picker.device_name, scenes.len())
+        }
+        _ => format!(" 🎬 Scenes — {} ", picker.device_name),
+    };
 
     match &picker.scenes {
         None => {
@@ -114,7 +141,9 @@ pub fn render(picker: &ScenePicker, theme: &Theme, frame: &mut Frame) {
                 .block(
                     Block::default()
                         .title(title)
-                        .title_bottom(" [↑↓/jk] browse  [enter] apply  [esc] close ")
+                        .title_bottom(
+                            " [↑↓/jk] browse  [pgup/pgdn] page  [enter] apply  [esc] close ",
+                        )
                         .borders(Borders::ALL)
                         .border_style(theme.border_focused),
                 )
