@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 
 use tokio::sync::mpsc;
 
-use crate::{api, cache, config};
+use crate::{api, cache};
 
 use super::async_ops::{AsyncCommand, AsyncResponse};
 use super::theme::Theme;
@@ -24,8 +24,6 @@ struct PendingControl {
 }
 
 pub struct App {
-    #[allow(dead_code)]
-    pub config: config::Config,
     pub theme: Theme,
     pub devices: Vec<api::Device>,
     /// Last confirmed state per device id (from state loads and control acks)
@@ -48,7 +46,7 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(client: api::Client, config: config::Config) -> Self {
+    pub fn new(client: api::Client) -> Self {
         let (cmd_tx, resp_rx) = super::async_ops::spawn_worker(client);
 
         // Paint the last-seen device list immediately; the first refresh
@@ -56,7 +54,6 @@ impl App {
         let devices = cache::load_devices().unwrap_or_default();
 
         let mut app = Self {
-            config,
             theme: Theme::dark(),
             devices,
             known_states: HashMap::new(),
@@ -158,7 +155,7 @@ impl App {
             .cloned();
     }
 
-    /// Send a control immediately (power, color — discrete actions)
+    /// Send a control immediately (power, color - discrete actions)
     pub fn send_control_now(&mut self, command: Command) {
         if let Some(device) = self.selected_device() {
             let device_id = device.id.clone();
@@ -232,9 +229,9 @@ impl App {
                     .map(|s| s.power)
             })
         else {
-            // No known state yet — fetch it rather than guessing
+            // No known state yet - fetch it rather than guessing
             self.request_load_device_state();
-            self.set_status("Power state unknown — loading, press Space again".to_string());
+            self.set_status("Power state unknown - loading, press Space again".to_string());
             return;
         };
         let new_power = !current;

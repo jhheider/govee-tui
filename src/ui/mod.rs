@@ -43,7 +43,7 @@ pub async fn run(client: api::Client, config: config::Config) -> Result<()> {
     // Device-list refreshes cost API budget (10,000 requests/day);
     // don't let a config typo turn this into a poll loop
     let refresh_ms = config.ui.refresh_interval_ms.max(10_000);
-    let mut app = App::new(client, config);
+    let mut app = App::new(client);
 
     // The interval's first tick fires immediately, triggering the initial load
     let mut refresh_interval = interval(Duration::from_millis(refresh_ms));

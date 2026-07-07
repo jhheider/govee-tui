@@ -89,9 +89,9 @@ pub fn render(picker: &ScenePicker, theme: &Theme, frame: &mut Frame) {
 
     let title = match &picker.scenes {
         Some(scenes) if !scenes.is_empty() => {
-            format!(" 🎬 Scenes — {} ({}) ", picker.device_name, scenes.len())
+            format!(" 🎬 Scenes - {} ({}) ", picker.device_name, scenes.len())
         }
-        _ => format!(" 🎬 Scenes — {} ", picker.device_name),
+        _ => format!(" 🎬 Scenes - {} ", picker.device_name),
     };
 
     match &picker.scenes {

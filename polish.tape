@@ -1,4 +1,4 @@
-# Screenshot capture for polish review — read-only interactions
+# Screenshot capture for polish review - read-only interactions
 Output polish_shots/throwaway.gif
 
 Set FontSize 15

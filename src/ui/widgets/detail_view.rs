@@ -65,7 +65,7 @@ pub fn render_with_style(
         unknown.clone()
     };
 
-    // Build capabilities list (plain text — VS16 emoji shear some terminals)
+    // Build capabilities list (plain text - VS16 emoji shear some terminals)
     let mut caps = vec![];
     if device.supports_power {
         caps.push("Power");

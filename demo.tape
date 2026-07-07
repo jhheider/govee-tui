@@ -1,4 +1,4 @@
-# vhs demo tape — drives the real TUI against live devices.
+# vhs demo tape - drives the real TUI against live devices.
 # Only interacts with "Floor Lamp" (device #5 in the list).
 Output demo.gif
 
@@ -35,7 +35,7 @@ Sleep 3s
 Enter
 Sleep 3s
 
-# brightness up (debounced — two presses, one API call)
+# brightness up (debounced - two presses, one API call)
 Type "k"
 Sleep 250ms
 Type "k"

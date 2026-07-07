@@ -2,60 +2,20 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
+    paths-ignore: ["**.md", "LICENSE*", ".gitignore"]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
+    paths-ignore: ["**.md", "LICENSE*", ".gitignore"]
 
-env:
-  CARGO_TERM_COLOR: always
-  CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  fmt:
-    name: Format Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-      - name: Check formatting
-        run: cargo fmt -- --check
-
-  clippy:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - uses: Swatinem/rust-cache@v2
-      - name: Run clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings -A dead_code
-
-  test:
-    name: Test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Run tests
-        run: cargo test --workspace --all-features
-
-  build:
-    name: Build
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Build debug binary
-        run: cargo build --verbose
+  ci:
+    uses: jhheider/rust-ci/.github/workflows/ci.yml@v1
+    with:
+      # Cloud-only TUI; ship targets are Linux + macOS, so skip the Windows runner.
+      os: '["ubuntu-latest","macos-latest"]'
+    secrets: inherit
