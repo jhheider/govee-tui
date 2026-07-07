@@ -19,6 +19,8 @@ jobs:
     uses: jhheider/rust-ci/.github/workflows/release.yml@v1
     with:
       bin-name: govee-tui
+      publish-crates: true
+      crates: "govee-api2 govee-tui"
       tap-repo: jhheider/homebrew-tap
       tap-formula: Formula/govee-tui.rb
       targets: |

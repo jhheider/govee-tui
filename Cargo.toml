@@ -46,7 +46,7 @@ keywords = ["govee", "tui", "smart-home", "iot"]
 categories = ["command-line-utilities"]
 
 [dependencies]
-govee-api2 = { path = "govee-api2" }
+govee-api2 = { path = "govee-api2", version = "0.1.0" }
 ratatui = { workspace = true }
 crossterm = { workspace = true }
 clap = { workspace = true }
