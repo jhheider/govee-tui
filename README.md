@@ -3,43 +3,41 @@
 [![CI](https://github.com/jhheider/govee-tui/actions/workflows/ci.yml/badge.svg)](https://github.com/jhheider/govee-tui/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
-A clean, colorful terminal user interface (TUI) for controlling Govee smart home devices - the only maintained Govee TUI around.
+A clean, colorful terminal UI for controlling your Govee smart lights - power, brightness, color, temperature, and scenes, all without leaving the keyboard. It's the only actively maintained Govee TUI around.
 
 ![demo](demo.gif)
 
-> **Heads up:** this talks to Govee's **cloud API**, so every control is an HTTPS round-trip (typically a few hundred ms) and subject to Govee's rate limits (10,000 requests/day). The app debounces and serializes controls so normal use stays well inside the limits.
-
-## Features
-
-- 💡 **Device management**: list, inspect, and control all your Govee devices
-- ⚡ **Full control**: power, brightness, RGB color, color temperature, and scenes - all in the TUI (and most via CLI)
-- 🎬 **Scene picker**: browse and apply your device's light scenes and DIY scenes
-- 🎨 **Interactive color picker**: RGB editor and named-color browser with true-color swatches
-- 🚦 **Rate-limit aware**: optimistic updates with debounced sends - hold the brightness key without burning your API budget
-- 🗂️ **Instant startup**: paints your last-seen device list from a local cache while it refreshes
-- ⌨️ **Vim-style navigation**: `j/k/h/l` plus arrows everywhere
-- 🚀 **Small and self-contained**: single binary, rustls (no OpenSSL)
+> **How it works:** govee-tui drives Govee's cloud API, so each control is an HTTPS round-trip (a few hundred ms) and counts against Govee's daily rate limit (10,000 requests/day). The app debounces and serializes commands, so normal use stays well within it. Local LAN control is on the [roadmap](#roadmap).
 
 ## Installation
 
-### From Source
+### Homebrew (recommended)
 
 ```bash
-# Install Rust if you haven't already
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Clone and build
-git clone https://github.com/jhheider/govee-tui
-cd govee-tui
-cargo build --release
-
-# Install
-sudo cp target/release/govee-tui /usr/local/bin/
+brew install jhheider/tap/govee-tui
 ```
 
-### From Pre-built Binaries
+### Prebuilt binaries
 
-Once releases are published, binaries for Linux (x86_64) and macOS (Intel/Apple Silicon) will be attached to [GitHub releases](https://github.com/jhheider/govee-tui/releases).
+Download a binary from the [latest release](https://github.com/jhheider/govee-tui/releases/latest), extract it, and put `govee-tui` somewhere on your `PATH`. Today's builds cover static musl Linux (x86_64) and native macOS (Intel and Apple Silicon), with more platforms on the way.
+
+### From source
+
+Requires a recent Rust toolchain. govee-tui isn't on crates.io yet, so install straight from the repo:
+
+```bash
+cargo install --git https://github.com/jhheider/govee-tui
+```
+
+### pkgx (coming soon)
+
+```bash
+pkgx govee-tui
+```
+
+A pantry PR is in flight; this will work once it lands.
+
+> **You'll need a Govee API key.** Before your first run, either set `GOVEE_API_KEY` or add your key to the config file - see [Getting a Govee API Key](#getting-a-govee-api-key). Controls fail without one.
 
 ## Configuration
 
@@ -60,9 +58,20 @@ The `GOVEE_API_KEY` environment variable takes precedence over the config file -
 ### Getting a Govee API Key
 
 1. Download the Govee Home app
-2. Go to Settings → About Us → Apply for API Key
+2. Go to Settings -> About Us -> Apply for API Key
 3. Follow the instructions to receive your key via email (this can take a little while - it's an application, not an instant token)
-4. Add the key to your config file
+4. Add the key to your config file, or export it as `GOVEE_API_KEY`
+
+## Features
+
+- 💡 **Device management**: list, inspect, and control all your Govee devices
+- ⚡ **Full control**: power, brightness, RGB color, color temperature, and scenes - all in the TUI (and most via CLI)
+- 🎬 **Scene picker**: browse and apply your device's light scenes and DIY scenes
+- 🎨 **Interactive color picker**: RGB editor and named-color browser with true-color swatches
+- 🚦 **Rate-limit aware**: optimistic updates with debounced sends - hold the brightness key without burning your API budget
+- 🗂️ **Instant startup**: paints your last-seen device list from a local cache while it refreshes
+- ⌨️ **Vim-style navigation**: `j/k/h/l` plus arrows everywhere
+- 🚀 **Small and self-contained**: single binary, rustls (no OpenSSL)
 
 ## Usage
 
@@ -90,7 +99,7 @@ govee-tui
 - `Space` - Toggle power
 - `↑/k` / `↓/j` - Brightness ±10%
 - `Shift+↑/↓` (or `K` / `J`) - Brightness ±5% (fine-grained)
-- `←/h` / `→/l` - Color temperature ±500K (warm ← → cool)
+- `←/h` / `→/l` - Color temperature ±500K (warm <- -> cool)
 - `Shift+←/→` (or `H` / `L`) - Color temperature ±100K (fine-grained)
 - `c` - Open color picker
 - `s` - Open scene picker
@@ -193,17 +202,15 @@ govee-tui/
 ## CI/CD
 
 - **Format / Lint / Test**: `rustfmt`, `clippy -D warnings`, full test suite on Linux + macOS
-- **Release**: tag `v*.*.*` → binaries for Linux (musl) and macOS (x86_64 + aarch64)
+- **Release**: tag `v*.*.*` -> binaries for Linux (musl) and macOS (x86_64 + aarch64)
 - **Security audit**: weekly `cargo audit`
 
 ## Roadmap
 
-- **LAN API support** - local UDP control: instant, offline, no API key, no rate limits. The one feature that changes the game vs. the phone app.
+- **LAN API support** - local UDP control: instant, offline, no API key, no rate limits. The single biggest upgrade on this list.
 - **Device search / filter** in the TUI
 - **Multi-device selection** and batched commands (turn a whole room off)
 - **Segmented color** - the API client already supports it; needs UI
-
-Issues and pull requests welcome.
 
 ## License
 
@@ -216,13 +223,12 @@ at your option.
 
 ## Contributing
 
-Contributions are welcome! Please:
+Issues and pull requests welcome. Before opening a PR:
 
-1. Fork the repository
-2. Create a feature branch
-3. Ensure `cargo fmt` and `cargo clippy` pass
-4. Add tests for new features
-5. Submit a pull request
+1. Fork the repository and create a feature branch
+2. Make sure `cargo fmt` and `cargo clippy -- -D warnings` pass
+3. Add tests for new behavior
+4. Open a pull request against `main`
 
 ## Acknowledgments
 
