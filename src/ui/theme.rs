@@ -10,8 +10,6 @@ pub struct Theme {
     pub highlight: Style,
     pub text: Style,
     pub success: Style,
-    #[allow(dead_code)]
-    pub warning: Style,
     pub error: Style,
     pub dim: Style,
 }
@@ -29,7 +27,6 @@ impl Theme {
             highlight: Style::default().fg(Color::Black).bg(Color::Cyan),
             text: Style::default().fg(Color::White),
             success: Style::default().fg(Color::Green),
-            warning: Style::default().fg(Color::Yellow),
             error: Style::default().fg(Color::Red),
             dim: Style::default().fg(Color::DarkGray),
         }
@@ -38,33 +35,17 @@ impl Theme {
 
 pub struct Emoji;
 
-#[allow(dead_code)]
 impl Emoji {
     pub const POWER_ON: &'static str = "✅";
     pub const POWER_OFF: &'static str = "⭕";
     pub const LIGHT: &'static str = "💡";
-    pub const STRIP: &'static str = "🌡️";
-    pub const BULB: &'static str = "💡";
     pub const COLOR: &'static str = "🌈";
     pub const WARM: &'static str = "☀️";
     pub const COOL: &'static str = "❄️";
     pub const BRIGHTNESS: &'static str = "🔆";
-    pub const SETTINGS: &'static str = "⚙️";
     pub const HELP: &'static str = "❓";
-    pub const REFRESH: &'static str = "🔄";
-    pub const SEARCH: &'static str = "🔍";
     pub const HOME: &'static str = "🏠";
-    pub const STATS: &'static str = "📊";
     pub const DEVICE: &'static str = "📱";
-    pub const API: &'static str = "📡";
-    pub const DATABASE: &'static str = "💾";
-    pub const TIME: &'static str = "🕐";
-    pub const SUCCESS: &'static str = "✓";
-    pub const ERROR: &'static str = "✗";
-    pub const ARROW_UP: &'static str = "↑";
-    pub const ARROW_DOWN: &'static str = "↓";
-    pub const ARROW_LEFT: &'static str = "←";
-    pub const ARROW_RIGHT: &'static str = "→";
     pub const LOADING: &'static str = "⏳";
 }
 

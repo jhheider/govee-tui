@@ -1,6 +1,6 @@
 # Govee TUI
 
-A clean, colorful terminal user interface (TUI) for controlling Govee smart home devices — the only maintained Govee TUI around.
+A clean, colorful terminal user interface (TUI) for controlling Govee smart home devices - the only maintained Govee TUI around.
 
 ![demo](demo.gif)
 
@@ -9,10 +9,10 @@ A clean, colorful terminal user interface (TUI) for controlling Govee smart home
 ## Features
 
 - 💡 **Device management**: list, inspect, and control all your Govee devices
-- ⚡ **Full control**: power, brightness, RGB color, color temperature, and scenes — all in the TUI (and most via CLI)
+- ⚡ **Full control**: power, brightness, RGB color, color temperature, and scenes - all in the TUI (and most via CLI)
 - 🎬 **Scene picker**: browse and apply your device's light scenes and DIY scenes
 - 🎨 **Interactive color picker**: RGB editor and named-color browser with true-color swatches
-- 🚦 **Rate-limit aware**: optimistic updates with debounced sends — hold the brightness key without burning your API budget
+- 🚦 **Rate-limit aware**: optimistic updates with debounced sends - hold the brightness key without burning your API budget
 - 🗂️ **Instant startup**: paints your last-seen device list from a local cache while it refreshes
 - ⌨️ **Vim-style navigation**: `j/k/h/l` plus arrows everywhere
 - 🚀 **Small and self-contained**: single binary, rustls (no OpenSSL)
@@ -52,13 +52,13 @@ retry_attempts = 3         # Retries for transport errors / 5xx (never 429)
 refresh_interval_ms = 30000  # Device-list auto-refresh (minimum 10000)
 ```
 
-The `GOVEE_API_KEY` environment variable takes precedence over the config file — handy for scripts and CI.
+The `GOVEE_API_KEY` environment variable takes precedence over the config file - handy for scripts and CI.
 
 ### Getting a Govee API Key
 
 1. Download the Govee Home app
 2. Go to Settings → About Us → Apply for API Key
-3. Follow the instructions to receive your key via email (this can take a little while — it's an application, not an instant token)
+3. Follow the instructions to receive your key via email (this can take a little while - it's an application, not an instant token)
 4. Add the key to your config file
 
 ## Usage
@@ -195,10 +195,10 @@ govee-tui/
 
 ## Roadmap
 
-- **LAN API support** — local UDP control: instant, offline, no API key, no rate limits. The one feature that changes the game vs. the phone app.
+- **LAN API support** - local UDP control: instant, offline, no API key, no rate limits. The one feature that changes the game vs. the phone app.
 - **Device search / filter** in the TUI
 - **Multi-device selection** and batched commands (turn a whole room off)
-- **Segmented color** — the API client already supports it; needs UI
+- **Segmented color** - the API client already supports it; needs UI
 
 Issues and pull requests welcome.
 
@@ -224,4 +224,4 @@ Contributions are welcome! Please:
 ## Acknowledgments
 
 - Built with [ratatui](https://github.com/ratatui-org/ratatui)
-- Talks to Govee devices via the bundled [`govee-api2`](govee-api2/) crate in this repo — a client for Govee's v2 platform API with scenes, segments, retry, and rate-limit handling
+- Talks to Govee devices via the bundled [`govee-api2`](govee-api2/) crate in this repo - a client for Govee's v2 platform API with scenes, segments, retry, and rate-limit handling

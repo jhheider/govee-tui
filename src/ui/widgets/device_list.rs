@@ -31,7 +31,7 @@ pub fn render_with_style(
         let placeholder = if loading {
             format!("{} Loading devices…", Emoji::LOADING)
         } else {
-            "No devices found — press r to refresh".to_string()
+            "No devices found - press r to refresh".to_string()
         };
         let empty = Paragraph::new(Line::from(placeholder))
             .style(theme.dim)
