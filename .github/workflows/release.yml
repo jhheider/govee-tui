@@ -2,9 +2,9 @@ name: Release
 
 # Fires when a GitHub Release is published:
 #   gh release create vX.Y.Z --generate-notes
-# (version must already be committed in Cargo.toml). Builds the static musl
-# Linux binary and both macOS binaries, attaches them, and refreshes the
-# Homebrew tap formula.
+# (version must already be committed in Cargo.toml). Builds static musl Linux
+# (x86_64 + aarch64), both macOS, and Windows binaries, attaches them, and
+# refreshes the Homebrew tap formula.
 on:
   release:
     types: [published]
@@ -24,7 +24,9 @@ jobs:
       targets: |
         {"include": [
           {"os":"ubuntu-latest","target":"x86_64-unknown-linux-musl","asset":"govee-tui-linux-x86_64.tar.gz"},
+          {"os":"ubuntu-latest","target":"aarch64-unknown-linux-musl","asset":"govee-tui-linux-aarch64.tar.gz"},
           {"os":"macos-latest","target":"x86_64-apple-darwin","asset":"govee-tui-macos-x86_64.tar.gz"},
-          {"os":"macos-latest","target":"aarch64-apple-darwin","asset":"govee-tui-macos-aarch64.tar.gz"}
+          {"os":"macos-latest","target":"aarch64-apple-darwin","asset":"govee-tui-macos-aarch64.tar.gz"},
+          {"os":"windows-latest","target":"x86_64-pc-windows-msvc","asset":"govee-tui-windows-x86_64.zip"}
         ]}
     secrets: inherit
