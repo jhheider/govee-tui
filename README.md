@@ -1,5 +1,8 @@
 # Govee TUI
 
+[![CI](https://github.com/jhheider/govee-tui/actions/workflows/ci.yml/badge.svg)](https://github.com/jhheider/govee-tui/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
+
 A clean, colorful terminal user interface (TUI) for controlling Govee smart home devices - the only maintained Govee TUI around.
 
 ![demo](demo.gif)
