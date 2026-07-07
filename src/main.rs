@@ -1,5 +1,5 @@
-use anyhow::Result;
 use clap::{Parser, Subcommand};
+use color_eyre::eyre::{bail, eyre, Result};
 use tracing::info;
 
 mod api;
@@ -74,7 +74,9 @@ enum ControlCommand {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> color_eyre::Result<()> {
+    color_eyre::install()?;
+
     let cli = Cli::parse();
 
     // Initialize logging (only to file in non-verbose mode)
@@ -252,7 +254,7 @@ async fn cmd_control_device(
     let device = find_device(&devices, device_query)?;
 
     if !device.controllable {
-        anyhow::bail!("❌ Device '{}' is not controllable", device.name);
+        bail!("❌ Device '{}' is not controllable", device.name);
     }
 
     let cmd = match command {
@@ -268,7 +270,7 @@ async fn cmd_control_device(
                         .find(|s| s.name.to_lowercase().contains(&name_lower))
                 })
                 .ok_or_else(|| {
-                    anyhow::anyhow!(
+                    eyre!(
                         "❌ No scene matching '{name}' on '{}' (try `govee-tui scenes \"{}\"`)",
                         device.name,
                         device.name
@@ -352,14 +354,14 @@ fn find_device<'a>(devices: &'a [api::Device], query: &str) -> Result<&'a api::D
         .collect();
 
     match matches.len() {
-        0 => anyhow::bail!("❌ No device found matching '{query}'"),
+        0 => bail!("❌ No device found matching '{query}'"),
         1 => Ok(matches[0]),
         _ => {
             println!("⚠️  Multiple devices match '{query}':");
             for device in matches {
                 println!("   - {} ({})", device.name, device.id);
             }
-            anyhow::bail!("Please be more specific or use the exact device ID");
+            bail!("Please be more specific or use the exact device ID");
         }
     }
 }

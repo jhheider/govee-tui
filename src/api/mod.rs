@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use color_eyre::eyre::{Result, WrapErr};
 use govee_api2::{ClientConfig, GoveeClient};
 use std::time::Duration;
 use tracing::{debug, info, warn};
@@ -37,7 +37,7 @@ impl Client {
             .inner
             .get_devices()
             .await
-            .context("Failed to fetch devices")?;
+            .wrap_err("Failed to fetch devices")?;
 
         info!("Successfully fetched {} devices from API", devices.len());
 
@@ -102,7 +102,7 @@ impl Client {
             .inner
             .get_dynamic_scenes(device_id, model)
             .await
-            .context("Failed to fetch scenes")?;
+            .wrap_err("Failed to fetch scenes")?;
 
         match self.inner.get_diy_scenes(device_id, model).await {
             Ok(diy) => scenes.extend(diy),
@@ -124,7 +124,7 @@ impl Client {
             .inner
             .get_device_state(device_id, model)
             .await
-            .context("Failed to get device state")?;
+            .wrap_err("Failed to get device state")?;
 
         // Convert govee_api2::DeviceState to our DeviceState
         Ok(models::DeviceState {
