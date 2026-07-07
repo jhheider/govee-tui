@@ -42,6 +42,7 @@ pub struct App {
     controls_inflight: u32,
     pending_brightness: Option<PendingControl>,
     pending_temp: Option<PendingControl>,
+    pending_power: Option<PendingControl>,
     status_deadline: Option<Instant>,
 }
 
@@ -68,6 +69,7 @@ impl App {
             controls_inflight: 0,
             pending_brightness: None,
             pending_temp: None,
+            pending_power: None,
             status_deadline: None,
         };
         if !app.devices.is_empty() {
@@ -99,7 +101,11 @@ impl App {
             return;
         }
         let now = Instant::now();
-        for slot in [&mut self.pending_brightness, &mut self.pending_temp] {
+        for slot in [
+            &mut self.pending_brightness,
+            &mut self.pending_temp,
+            &mut self.pending_power,
+        ] {
             if slot.as_ref().is_some_and(|p| now >= p.deadline) {
                 let p = slot.take().unwrap();
                 self.controls_inflight += 1;
@@ -184,7 +190,8 @@ impl App {
         match command {
             Command::Brightness(_) => self.pending_brightness = Some(pending),
             Command::ColorTemp(_) => self.pending_temp = Some(pending),
-            _ => unreachable!("only brightness/temp are debounced"),
+            Command::TurnOn | Command::TurnOff => self.pending_power = Some(pending),
+            _ => unreachable!("only brightness/temp/power are debounced"),
         }
     }
 
@@ -236,7 +243,15 @@ impl App {
         };
         let new_power = !current;
         self.apply_power_locally(new_power);
-        self.send_control_now(Command::turn(new_power));
+        // Send the first toggle immediately for responsiveness, but if a control
+        // is already on the wire (or a power send is queued), coalesce into the
+        // debounced slot so held-Space auto-repeat collapses to a single send
+        // instead of flooding the device with on/off flips.
+        if self.controls_inflight == 0 && self.pending_power.is_none() {
+            self.send_control_now(Command::turn(new_power));
+        } else {
+            self.schedule_control(Command::turn(new_power));
+        }
     }
 
     fn apply_power_locally(&mut self, power: bool) {
@@ -325,6 +340,7 @@ impl App {
                         if selected
                             && self.pending_brightness.is_none()
                             && self.pending_temp.is_none()
+                            && self.pending_power.is_none()
                         {
                             self.state.device_state = Some(state.clone());
                         }
@@ -353,17 +369,35 @@ impl App {
                         self.state.error_message = None;
                     }
                     Err(e) => {
-                        // Revert an optimistic power flip; brightness/temp/color
-                        // keep the local value but surface the error
-                        if let Command::TurnOn | Command::TurnOff = command {
-                            let attempted = matches!(command, Command::TurnOn);
-                            if self.selected_device().is_some_and(|d| d.id == device_id) {
-                                if let Some(state) = &mut self.state.device_state {
-                                    state.power = !attempted;
+                        // Roll the optimistic local value back to the last
+                        // confirmed state, so the UI never keeps showing a value
+                        // the device did not accept (the error banner alone is
+                        // transient and gets cleared by the next refresh).
+                        let selected = self.selected_device().is_some_and(|d| d.id == device_id);
+                        match command {
+                            Command::TurnOn | Command::TurnOff => {
+                                let attempted = matches!(command, Command::TurnOn);
+                                if selected {
+                                    if let Some(state) = &mut self.state.device_state {
+                                        state.power = !attempted;
+                                    }
+                                }
+                                if let Some(known) = self.known_states.get_mut(&device_id) {
+                                    known.power = !attempted;
                                 }
                             }
-                            if let Some(known) = self.known_states.get_mut(&device_id) {
-                                known.power = !attempted;
+                            _ => {
+                                // brightness/temp/color are written to known_states
+                                // only on success, so it holds the last confirmed
+                                // value: restore the failed field from it.
+                                if selected {
+                                    if let Some(known) = self.known_states.get(&device_id).cloned()
+                                    {
+                                        if let Some(state) = &mut self.state.device_state {
+                                            revert_command(state, &known, &command);
+                                        }
+                                    }
+                                }
                             }
                         }
                         self.state.error_message =
@@ -424,6 +458,18 @@ fn apply_command(state: &mut DeviceState, command: &Command) {
     }
 }
 
+/// Roll back the single field a failed command optimistically changed, using the
+/// last confirmed state. Power is handled separately (its known state is written
+/// optimistically); this covers the non-power controls.
+fn revert_command(state: &mut DeviceState, known: &DeviceState, command: &Command) {
+    match command {
+        Command::Brightness(_) => state.brightness = known.brightness,
+        Command::Color(..) => state.color = known.color,
+        Command::ColorTemp(_) => state.color_temp = known.color_temp,
+        Command::TurnOn | Command::TurnOff | Command::Scene(_) => {}
+    }
+}
+
 fn describe_success(command: &Command) -> String {
     match command {
         Command::TurnOn => "Power ON".to_string(),
@@ -445,5 +491,71 @@ fn describe_failure(command: &Command) -> &'static str {
         Command::Color(..) => "Failed to set color",
         Command::ColorTemp(_) => "Failed to set color temperature",
         Command::Scene(_) => "Failed to set scene",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api::models::{DeviceState, RgbColor};
+
+    fn state(
+        power: bool,
+        brightness: Option<u8>,
+        color: Option<RgbColor>,
+        color_temp: Option<u16>,
+    ) -> DeviceState {
+        DeviceState {
+            power,
+            brightness,
+            color,
+            color_temp,
+        }
+    }
+
+    #[test]
+    fn revert_restores_confirmed_brightness() {
+        let known = state(true, Some(40), None, None);
+        let mut cur = state(true, Some(90), None, None); // optimistic, unaccepted
+        revert_command(&mut cur, &known, &Command::brightness(90));
+        assert_eq!(cur.brightness, Some(40));
+    }
+
+    #[test]
+    fn revert_restores_confirmed_color() {
+        let known = state(true, None, Some(RgbColor::new(1, 2, 3)), None);
+        let mut cur = state(true, None, Some(RgbColor::new(250, 0, 0)), None);
+        revert_command(&mut cur, &known, &Command::color(250, 0, 0));
+        assert_eq!(cur.color.map(|c| (c.r, c.g, c.b)), Some((1, 2, 3)));
+    }
+
+    #[test]
+    fn revert_restores_confirmed_color_temp() {
+        let known = state(true, None, None, Some(3000));
+        let mut cur = state(true, None, None, Some(6500));
+        revert_command(&mut cur, &known, &Command::temperature(6500));
+        assert_eq!(cur.color_temp, Some(3000));
+    }
+
+    #[test]
+    fn revert_only_touches_the_failed_field() {
+        let known = state(true, Some(40), Some(RgbColor::new(1, 1, 1)), Some(3000));
+        let mut cur = state(false, Some(90), Some(RgbColor::new(9, 9, 9)), Some(9000));
+        revert_command(&mut cur, &known, &Command::brightness(90));
+        assert_eq!(cur.brightness, Some(40)); // reverted
+        assert!(!cur.power); // untouched
+        assert_eq!(cur.color.map(|c| c.r), Some(9)); // untouched
+        assert_eq!(cur.color_temp, Some(9000)); // untouched
+    }
+
+    #[test]
+    fn revert_is_noop_for_power_and_scene() {
+        // Power reverts via its own path (known state is optimistic); scenes
+        // have no single field to restore. revert_command leaves fields alone.
+        let known = state(true, Some(40), None, None);
+        let mut cur = state(false, Some(90), None, None);
+        revert_command(&mut cur, &known, &Command::turn(false));
+        assert_eq!(cur.brightness, Some(90));
+        assert!(!cur.power);
     }
 }
