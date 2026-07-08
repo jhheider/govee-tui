@@ -216,7 +216,7 @@ impl GoveeClient {
         .await
     }
 
-    /// Set device brightness (0–100).
+    /// Set device brightness (0-100).
     ///
     /// Values above 100 are silently clamped.
     pub async fn set_brightness(&self, device_id: &str, sku: &str, brightness: u8) -> Result<()> {
@@ -245,7 +245,7 @@ impl GoveeClient {
         .await
     }
 
-    /// Set colour temperature in Kelvin (2000–9000).
+    /// Set colour temperature in Kelvin (2000-9000).
     ///
     /// Values outside the range are silently clamped.
     pub async fn set_color_temperature(
@@ -304,7 +304,7 @@ impl GoveeClient {
 
     /// Set the brightness of specific segments of a segmented light.
     ///
-    /// Each segment receives the same brightness value (0–100).
+    /// Each segment receives the same brightness value (0-100).
     pub async fn set_segment_brightness(
         &self,
         device_id: &str,
