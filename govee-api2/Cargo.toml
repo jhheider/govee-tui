@@ -9,9 +9,6 @@ description = "Rust client for Govee's v2 router-based API with support for devi
 keywords = ["govee", "smart-home", "iot", "api-client"]
 categories = ["api-bindings"]
 
-[features]
-integration-tests = []
-
 [dependencies]
 reqwest = { workspace = true }
 serde = { workspace = true }
