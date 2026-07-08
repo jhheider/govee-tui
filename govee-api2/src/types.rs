@@ -623,4 +623,147 @@ mod tests {
         assert_eq!(Color::new(255, 255, 255).to_packed(), 16777215);
         assert_eq!(Color::new(1, 2, 3).to_hex(), "#010203");
     }
+
+    #[test]
+    fn scenes_skip_option_without_name() {
+        let capabilities: Vec<Capability> = serde_json::from_value(serde_json::json!([
+            {
+                "type": "devices.capabilities.dynamic_scene",
+                "instance": "lightScene",
+                "parameters": {
+                    "dataType": "ENUM",
+                    "options": [
+                        { "value": { "paramId": 4280, "id": 3853 } }
+                    ]
+                }
+            }
+        ]))
+        .unwrap();
+        assert!(Scene::from_capabilities(&capabilities).is_empty());
+    }
+
+    #[test]
+    fn scenes_skip_option_without_value() {
+        let capabilities: Vec<Capability> = serde_json::from_value(serde_json::json!([
+            {
+                "type": "devices.capabilities.dynamic_scene",
+                "instance": "lightScene",
+                "parameters": {
+                    "dataType": "ENUM",
+                    "options": [
+                        { "name": "No Value Here" }
+                    ]
+                }
+            }
+        ]))
+        .unwrap();
+        assert!(Scene::from_capabilities(&capabilities).is_empty());
+    }
+
+    #[test]
+    fn scenes_skip_option_with_unparseable_value() {
+        // value is an object but has neither 'id' nor a bare integer
+        let capabilities: Vec<Capability> = serde_json::from_value(serde_json::json!([
+            {
+                "type": "devices.capabilities.dynamic_scene",
+                "instance": "lightScene",
+                "parameters": {
+                    "dataType": "ENUM",
+                    "options": [
+                        { "name": "Broken", "value": { "notId": 1, "notParamId": 2 } }
+                    ]
+                }
+            }
+        ]))
+        .unwrap();
+        assert!(Scene::from_capabilities(&capabilities).is_empty());
+    }
+
+    #[test]
+    fn device_state_empty_capabilities() {
+        let state = DeviceState::from_capabilities(vec![]);
+        assert!(!state.power);
+        assert_eq!(state.online, None);
+        assert_eq!(state.brightness, None);
+        assert!(!state.has_segments);
+    }
+
+    #[test]
+    fn device_state_unknown_capability_is_ignored() {
+        let capabilities: Vec<CapabilityState> = serde_json::from_value(serde_json::json!([
+            { "type": "unknown.vendor.type", "instance": "foo",
+              "state": { "value": 42 } }
+        ]))
+        .unwrap();
+        // Unknown capabilities should be silently ignored
+        let state = DeviceState::from_capabilities(capabilities);
+        assert!(!state.power);
+        assert_eq!(state.brightness, None);
+    }
+
+    #[test]
+    fn device_state_handles_color_temperature_old_name() {
+        // Some devices report instance="colorTem" instead of "colorTemperatureK"
+        let capabilities: Vec<CapabilityState> = serde_json::from_value(serde_json::json!([
+            { "type": "devices.capabilities.color_setting", "instance": "colorTem",
+              "state": { "value": 3500 } }
+        ]))
+        .unwrap();
+        let state = DeviceState::from_capabilities(capabilities);
+        assert_eq!(state.color_temperature_kelvin, Some(3500));
+    }
+
+    #[test]
+    fn power_state_on_off() {
+        assert!(PowerState::On.is_on());
+        assert!(!PowerState::Off.is_on());
+    }
+
+    #[test]
+    fn device_support_methods_no_capabilities() {
+        let device = Device {
+            device: "test".into(),
+            sku: "H1234".into(),
+            device_name: "Test".into(),
+            device_type: None,
+            capabilities: vec![],
+        };
+        assert!(!device.is_group());
+        assert!(!device.supports_power());
+        assert!(!device.supports_brightness());
+        assert!(!device.supports_color());
+        assert!(!device.supports_color_temp());
+        assert!(!device.supports_scenes());
+        assert!(!device.supports_segments());
+    }
+
+    #[test]
+    fn device_serde_round_trip() {
+        let device = full_featured_device();
+        let json = serde_json::to_value(&device).unwrap();
+        let deserialized: Device = serde_json::from_value(json).unwrap();
+        assert_eq!(device.device, deserialized.device);
+        assert_eq!(device.sku, deserialized.sku);
+        assert_eq!(device.device_name, deserialized.device_name);
+    }
+
+    #[test]
+    fn scene_from_capability_missing_parameters() {
+        let capabilities: Vec<Capability> = serde_json::from_value(serde_json::json!([
+            {
+                "type": "devices.capabilities.diy_color_setting",
+                "instance": "diyScene",
+                "parameters": {
+                    "dataType": "ENUM",
+                    "options": [
+                        { "name": "Valid", "value": 12345 }
+                    ]
+                }
+            }
+        ]))
+        .unwrap();
+        let scenes = Scene::from_capabilities(&capabilities);
+        assert_eq!(scenes.len(), 1);
+        assert_eq!(scenes[0].control_value(), serde_json::json!(12345));
+    }
 }

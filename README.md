@@ -1,6 +1,8 @@
 # Govee TUI
 
 [![CI](https://github.com/jhheider/govee-tui/actions/workflows/ci.yml/badge.svg)](https://github.com/jhheider/govee-tui/actions/workflows/ci.yml)
+[![Coverage Status](https://coveralls.io/repos/github/jhheider/govee-tui/badge.svg?branch=main)](https://coveralls.io/github/jhheider/govee-tui?branch=main)
+[![crates.io](https://img.shields.io/crates/v/govee-tui.svg)](https://crates.io/crates/govee-tui)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
 A clean, colorful terminal UI for controlling your Govee smart lights - power, brightness, color, temperature, and scenes, all without leaving the keyboard. It's the only actively maintained Govee TUI around.
@@ -29,13 +31,11 @@ Requires a recent Rust toolchain. govee-tui isn't on crates.io yet, so install s
 cargo install --git https://github.com/jhheider/govee-tui
 ```
 
-### pkgx (coming soon)
+### pkgx
 
 ```bash
 pkgx govee-tui
 ```
-
-A pantry PR is in flight; this will work once it lands.
 
 > **You'll need a Govee API key.** Before your first run, either set `GOVEE_API_KEY` or add your key to the config file - see [Getting a Govee API Key](#getting-a-govee-api-key). Controls fail without one.
 
