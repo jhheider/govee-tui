@@ -141,13 +141,11 @@ mod tests {
             sku: "H6072".into(),
             device_name: "Lamp".into(),
             device_type: None,
-            capabilities: vec![
-                govee_api2::Capability {
-                    capability_type: "devices.capabilities.dynamic_scene".into(),
-                    instance: "lightScene".into(),
-                    parameters: serde_json::json!({}),
-                },
-            ],
+            capabilities: vec![govee_api2::Capability {
+                capability_type: "devices.capabilities.dynamic_scene".into(),
+                instance: "lightScene".into(),
+                parameters: serde_json::json!({}),
+            }],
         };
 
         let device = Device::from(api_device);
@@ -162,13 +160,11 @@ mod tests {
             sku: "H6072".into(),
             device_name: "Minimal".into(),
             device_type: None,
-            capabilities: vec![
-                govee_api2::Capability {
-                    capability_type: "devices.capabilities.on_off".into(),
-                    instance: "powerSwitch".into(),
-                    parameters: serde_json::json!({}),
-                },
-            ],
+            capabilities: vec![govee_api2::Capability {
+                capability_type: "devices.capabilities.on_off".into(),
+                instance: "powerSwitch".into(),
+                parameters: serde_json::json!({}),
+            }],
         };
 
         let device = Device::from(api_device);

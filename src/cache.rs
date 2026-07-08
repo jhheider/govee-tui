@@ -63,9 +63,8 @@ mod tests {
         atomic_save(&devices, &path).unwrap();
 
         assert!(path.exists());
-        let loaded: Vec<Device> = serde_json::from_str(
-            &std::fs::read_to_string(&path).unwrap()
-        ).unwrap();
+        let loaded: Vec<Device> =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
         assert_eq!(loaded.len(), 1);
         assert_eq!(loaded[0].name, "Lamp");
 
@@ -82,9 +81,8 @@ mod tests {
         let devices = vec![device.clone()];
         atomic_save(&devices, &path).unwrap();
 
-        let loaded: Vec<Device> = serde_json::from_str(
-            &std::fs::read_to_string(&path).unwrap()
-        ).unwrap();
+        let loaded: Vec<Device> =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
         assert_eq!(loaded[0].id, device.id);
         assert_eq!(loaded[0].name, device.name);
         assert_eq!(loaded[0].model, device.model);
@@ -105,9 +103,8 @@ mod tests {
         let replacement = vec![test_device("Replacement")];
         atomic_save(&replacement, &path).unwrap();
 
-        let loaded: Vec<Device> = serde_json::from_str(
-            &std::fs::read_to_string(&path).unwrap()
-        ).unwrap();
+        let loaded: Vec<Device> =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
         assert_eq!(loaded.len(), 1);
         assert_eq!(loaded[0].name, "Replacement");
 
@@ -121,9 +118,8 @@ mod tests {
         let path = dir.join("devices.json");
 
         atomic_save(&[], &path).unwrap();
-        let loaded: Vec<Device> = serde_json::from_str(
-            &std::fs::read_to_string(&path).unwrap()
-        ).unwrap();
+        let loaded: Vec<Device> =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
         assert!(loaded.is_empty());
 
         let _ = std::fs::remove_dir_all(&dir);

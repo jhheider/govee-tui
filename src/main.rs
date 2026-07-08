@@ -442,9 +442,7 @@ mod tests {
 
     #[test]
     fn find_device_case_insensitive() {
-        let devices = vec![
-            test_device("Living Room", "id-1"),
-        ];
+        let devices = vec![test_device("Living Room", "id-1")];
 
         let result = find_device(&devices, "LIVING").unwrap();
         assert_eq!(result.name, "Living Room");

@@ -52,7 +52,9 @@ mod tests {
 
     #[test]
     fn error_rate_limited_no_retry() {
-        let err = Error::RateLimited { retry_after_secs: None };
+        let err = Error::RateLimited {
+            retry_after_secs: None,
+        };
         assert_eq!(err.to_string(), "rate limited by the Govee API");
     }
 
@@ -85,10 +87,7 @@ mod tests {
     #[test]
     fn error_invalid_response_display() {
         let err = Error::InvalidResponse("unexpected EOF".into());
-        assert_eq!(
-            err.to_string(),
-            "Invalid response format: unexpected EOF"
-        );
+        assert_eq!(err.to_string(), "Invalid response format: unexpected EOF");
     }
 
     #[test]
