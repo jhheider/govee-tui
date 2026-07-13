@@ -17,12 +17,14 @@ A Rust client for Govee's v2 router-based platform API
 
 ## Installation
 
-This crate is not published on crates.io. Use it as a path or git dependency:
+```bash
+cargo add govee-api2
+```
+
+Or, to track unreleased changes, as a git dependency:
 
 ```toml
 [dependencies]
-govee-api2 = { path = "govee-api2" }
-# or
 govee-api2 = { git = "https://github.com/jhheider/govee-tui" }
 ```
 

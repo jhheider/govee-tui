@@ -23,7 +23,13 @@ Download a binary from the [latest release](https://github.com/jhheider/govee-tu
 
 ### From source
 
-Requires a recent Rust toolchain. govee-tui isn't on crates.io yet, so install straight from the repo:
+Requires a recent Rust toolchain:
+
+```bash
+cargo install govee-tui
+```
+
+Or the latest unreleased code straight from the repo:
 
 ```bash
 cargo install --git https://github.com/jhheider/govee-tui
