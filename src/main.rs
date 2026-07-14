@@ -396,3 +396,121 @@ fn init_logging(verbose: bool) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_device(name: &str, id: &str) -> api::Device {
+        api::Device {
+            id: id.into(),
+            name: name.into(),
+            model: "H6072".into(),
+            controllable: true,
+            retrievable: true,
+            is_group: false,
+            device_type: Some("devices.types.light".into()),
+            supports_power: true,
+            supports_brightness: true,
+            supports_color: true,
+            supports_color_temp: true,
+            supports_scenes: false,
+        }
+    }
+
+    #[test]
+    fn find_device_exact_id_match() {
+        let devices = vec![
+            test_device("Living Room", "AA:BB:CC:DD:00:11:22:33"),
+            test_device("Bedroom", "AA:BB:CC:DD:44:55:66:77"),
+        ];
+
+        let result = find_device(&devices, "AA:BB:CC:DD:44:55:66:77").unwrap();
+        assert_eq!(result.name, "Bedroom");
+    }
+
+    #[test]
+    fn find_device_fuzzy_name_match() {
+        let devices = vec![
+            test_device("Living Room", "id-1"),
+            test_device("Bedroom", "id-2"),
+        ];
+
+        let result = find_device(&devices, "living").unwrap();
+        assert_eq!(result.name, "Living Room");
+    }
+
+    #[test]
+    fn find_device_case_insensitive() {
+        let devices = vec![test_device("Living Room", "id-1")];
+
+        let result = find_device(&devices, "LIVING").unwrap();
+        assert_eq!(result.name, "Living Room");
+    }
+
+    #[test]
+    fn find_device_no_match_errors() {
+        let devices = vec![test_device("Living Room", "id-1")];
+
+        let result = find_device(&devices, "Kitchen");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Kitchen"));
+    }
+
+    #[test]
+    fn find_device_multiple_matches_errors() {
+        let devices = vec![
+            test_device("Living Room Light", "id-1"),
+            test_device("Living Room Strip", "id-2"),
+        ];
+
+        let result = find_device(&devices, "Living");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn find_device_id_beats_fuzzy() {
+        // When an ID matches exactly, prefer it over fuzzy name matches
+        let devices = vec![
+            test_device("AA:BB", "exact-id"),
+            test_device("Some Device", "aa:bb"),
+        ];
+
+        let result = find_device(&devices, "exact-id").unwrap();
+        assert_eq!(result.name, "AA:BB");
+    }
+
+    #[test]
+    fn truncate_short_string() {
+        assert_eq!(truncate("hello", 10), "hello");
+    }
+
+    #[test]
+    fn truncate_exact_length() {
+        assert_eq!(truncate("hello", 5), "hello");
+    }
+
+    #[test]
+    fn truncate_long_string() {
+        let result = truncate("hello world this is long", 10);
+        assert_eq!(result, "hello w...");
+        assert_eq!(result.chars().count(), 10);
+    }
+
+    #[test]
+    fn truncate_unicode() {
+        let result = truncate("héllo wörld", 8);
+        assert_eq!(result.chars().count(), 8);
+    }
+
+    #[test]
+    fn truncate_empty_string() {
+        assert_eq!(truncate("", 5), "");
+    }
+
+    #[test]
+    fn truncate_zero_max_len() {
+        assert_eq!(truncate("hello", 0), "...");
+        assert_eq!(truncate("hello", 0).chars().count(), 3);
+    }
+}

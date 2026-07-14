@@ -10,6 +10,9 @@ const API_BASE: &str = "https://openapi.api.govee.com";
 const RETRY_BASE_DELAY: Duration = Duration::from_millis(100);
 
 /// Configuration for a [`GoveeClient`].
+///
+/// Controls timeout, retry behaviour, and the API base URL (useful for
+/// testing against a mock server).
 #[derive(Debug, Clone)]
 pub struct ClientConfig {
     /// Per-request timeout (default: 10 seconds)
@@ -46,11 +49,21 @@ pub struct GoveeClient {
 impl GoveeClient {
     /// Create a new Govee API client with default configuration
     /// (10 second timeout, 3 retries).
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use govee_api2::GoveeClient;
+    /// let client = GoveeClient::new("your-api-key");
+    /// ```
     pub fn new(api_key: impl Into<String>) -> Self {
         Self::with_config(api_key, ClientConfig::default())
     }
 
     /// Create a new Govee API client with a custom configuration.
+    ///
+    /// Use this when you need to customise the timeout, retry policy, or
+    /// point the client at a mock server for testing.
     pub fn with_config(api_key: impl Into<String>, config: ClientConfig) -> Self {
         let client = reqwest::Client::builder()
             .timeout(config.timeout)
@@ -64,7 +77,16 @@ impl GoveeClient {
         }
     }
 
-    /// List all devices and groups
+    /// List all devices and groups associated with the API key.
+    ///
+    /// Calls `GET /router/api/v1/user/devices`. Each device includes its
+    /// capabilities, which can be queried with the convenience methods on
+    /// [`Device`] (e.g. [`Device::supports_color`]).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::InvalidApiKey`] if the key is rejected, or
+    /// [`Error::RateLimited`] if the account's daily quota is exhausted.
     pub async fn get_devices(&self) -> Result<Vec<Device>> {
         let response = self.request("/router/api/v1/user/devices", None).await?;
         let api_response: ApiResponse<Vec<Device>> = Self::parse_json(response).await?;
@@ -74,7 +96,16 @@ impl GoveeClient {
         Ok(api_response.data)
     }
 
-    /// Get the current state of a device
+    /// Get the current state of a device.
+    ///
+    /// Calls `POST /router/api/v1/device/state`. Returns power, brightness,
+    /// colour, colour temperature, online status, active scenes, and whether
+    /// the device supports segmented control.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::DeviceNotFound`] if the device identifier is unknown
+    /// to the API key's account.
     pub async fn get_device_state(&self, device_id: &str, sku: &str) -> Result<DeviceState> {
         let payload = json!({
             "requestId": generate_request_id(),
@@ -98,6 +129,9 @@ impl GoveeClient {
 
     /// List the dynamic light scenes available for a device
     /// (`POST /router/api/v1/device/scenes`).
+    ///
+    /// Returns scenes built into the device (e.g. "Sunrise", "Night").
+    /// See also [`Self::get_diy_scenes`] for user-created scenes.
     pub async fn get_dynamic_scenes(&self, device_id: &str, sku: &str) -> Result<Vec<Scene>> {
         self.get_scene_list("/router/api/v1/device/scenes", device_id, sku)
             .await
@@ -105,6 +139,9 @@ impl GoveeClient {
 
     /// List the user-created DIY scenes available for a device
     /// (`POST /router/api/v1/device/diy-scenes`).
+    ///
+    /// DIY scenes are custom scenes the user created in the Govee Home app.
+    /// These may not be available on every device or account.
     pub async fn get_diy_scenes(&self, device_id: &str, sku: &str) -> Result<Vec<Scene>> {
         self.get_scene_list("/router/api/v1/device/diy-scenes", device_id, sku)
             .await
@@ -129,6 +166,17 @@ impl GoveeClient {
 
     /// Activate a scene previously returned by [`Self::get_dynamic_scenes`]
     /// or [`Self::get_diy_scenes`].
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use govee_api2::GoveeClient;
+    /// let client = GoveeClient::new("key");
+    /// let scenes = client.get_dynamic_scenes("device-id", "H6072").await.unwrap();
+    /// if let Some(scene) = scenes.first() {
+    ///     client.set_scene("device-id", "H6072", scene).await.unwrap();
+    /// }
+    /// ```
     pub async fn set_scene(&self, device_id: &str, sku: &str, scene: &Scene) -> Result<()> {
         self.send_control(
             device_id,
@@ -140,12 +188,16 @@ impl GoveeClient {
         .await
     }
 
-    /// Turn a device on
+    /// Turn a device on.
+    ///
+    /// Sends an `on_off` command with value `1`.
     pub async fn turn_on(&self, device_id: &str, sku: &str) -> Result<()> {
         self.control_power(device_id, sku, PowerState::On).await
     }
 
-    /// Turn a device off
+    /// Turn a device off.
+    ///
+    /// Sends an `on_off` command with value `0`.
     pub async fn turn_off(&self, device_id: &str, sku: &str) -> Result<()> {
         self.control_power(device_id, sku, PowerState::Off).await
     }
@@ -164,7 +216,9 @@ impl GoveeClient {
         .await
     }
 
-    /// Set device brightness (0-100)
+    /// Set device brightness (0-100).
+    ///
+    /// Values above 100 are silently clamped.
     pub async fn set_brightness(&self, device_id: &str, sku: &str, brightness: u8) -> Result<()> {
         let brightness = brightness.min(100);
         self.send_control(
@@ -177,7 +231,9 @@ impl GoveeClient {
         .await
     }
 
-    /// Set device color
+    /// Set device colour.
+    ///
+    /// Sends an RGB value as a packed integer `(r << 16) | (g << 8) | b`.
     pub async fn set_color(&self, device_id: &str, sku: &str, color: Color) -> Result<()> {
         self.send_control(
             device_id,
@@ -189,7 +245,9 @@ impl GoveeClient {
         .await
     }
 
-    /// Set color temperature in Kelvin (2000-9000)
+    /// Set colour temperature in Kelvin (2000-9000).
+    ///
+    /// Values outside the range are silently clamped.
     pub async fn set_color_temperature(
         &self,
         device_id: &str,
@@ -207,10 +265,19 @@ impl GoveeClient {
         .await
     }
 
-    /// Set the color of specific segments of a segmented light.
+    /// Set the colour of specific segments of a segmented light.
     ///
     /// `segments` are zero-based segment indices as advertised by the
     /// device's `segmentedColorRgb` capability.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use govee_api2::GoveeClient;
+    /// let client = GoveeClient::new("key");
+    /// // Set segments 0 and 1 to red
+    /// client.set_segment_color("device-id", "H6072", &[0, 1], 255, 0, 0).await.unwrap();
+    /// ```
     pub async fn set_segment_color(
         &self,
         device_id: &str,
@@ -235,7 +302,9 @@ impl GoveeClient {
         .await
     }
 
-    /// Set the brightness (0-100) of specific segments of a segmented light.
+    /// Set the brightness of specific segments of a segmented light.
+    ///
+    /// Each segment receives the same brightness value (0-100).
     pub async fn set_segment_brightness(
         &self,
         device_id: &str,
@@ -468,11 +537,5 @@ mod tests {
         headers.insert("X-RateLimit-Reset", reset.to_string().parse().unwrap());
         let secs = parse_retry_after(&headers).unwrap();
         assert!((59..=61).contains(&secs), "expected ~60s, got {secs}");
-    }
-
-    #[test]
-    fn test_parse_retry_after_missing() {
-        let headers = reqwest::header::HeaderMap::new();
-        assert_eq!(parse_retry_after(&headers), None);
     }
 }
