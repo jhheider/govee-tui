@@ -36,7 +36,8 @@ wiremock = "0.6"
 
 [package]
 name = "govee-tui"
-version = "0.15.0"edition.workspace = true
+version = "0.1.0"
+edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -45,7 +46,7 @@ keywords = ["govee", "tui", "smart-home", "iot"]
 categories = ["command-line-utilities"]
 
 [dependencies]
-govee-api2 = { path = "govee-api2", version = "0.15.0" }
+govee-api2 = { path = "govee-api2", version = "0.1.0" }
 ratatui = { workspace = true }
 crossterm = { workspace = true }
 clap = { workspace = true }
