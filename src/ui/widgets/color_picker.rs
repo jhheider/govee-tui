@@ -219,7 +219,7 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
     .block(Block::default().borders(Borders::ALL).title("Preview"));
     frame.render_widget(preview, preview_chunk);
 
-    // Main content area - either RGB sliders or color browser
+    // Main content area: either RGB sliders or color browser
     let main_chunk = if picker.mode == ColorPickerMode::Browser {
         chunks[3]
     } else {
@@ -273,7 +273,7 @@ pub fn render(picker: &ColorPicker, theme: &Theme, frame: &mut Frame) {
             frame.render_widget(sliders, main_chunk);
         }
         ColorPickerMode::Browser => {
-            // Color browser - just show color names with simple swatches
+            // Color browser: just show color names with simple swatches
             let groups = get_color_groups();
             if let Some(group) = groups.get(picker.selected_group) {
                 let items: Vec<ListItem> = group

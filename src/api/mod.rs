@@ -94,7 +94,7 @@ impl Client {
     }
 
     /// Dynamic light scenes plus the user's DIY scenes. A missing/failed
-    /// DIY list doesn't fail the call - not every device or account has one.
+    /// DIY list doesn't fail the call; not every device or account has one.
     pub async fn get_scenes(&self, device_id: &str, model: &str) -> Result<Vec<Scene>> {
         debug!("Fetching scenes for device {}", device_id);
 

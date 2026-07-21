@@ -3,7 +3,7 @@
 [![CI](https://github.com/jhheider/govee-tui/actions/workflows/ci.yml/badge.svg)](https://github.com/jhheider/govee-tui/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
-A clean, colorful terminal UI for controlling your Govee smart lights - power, brightness, color, temperature, and scenes, all without leaving the keyboard. It's the only actively maintained Govee TUI around.
+A clean, colorful terminal UI for controlling your Govee smart lights: power, brightness, color, temperature, and scenes, all without leaving the keyboard. It's the only actively maintained Govee TUI around.
 
 ![demo](demo.gif)
 
@@ -43,7 +43,7 @@ pkgx govee-tui
 
 A pantry PR is in flight; this will work once it lands.
 
-> **You'll need a Govee API key.** Before your first run, either set `GOVEE_API_KEY` or add your key to the config file - see [Getting a Govee API Key](#getting-a-govee-api-key). Controls fail without one.
+> **You'll need a Govee API key.** Before your first run, either set `GOVEE_API_KEY` or add your key to the config file; see [Getting a Govee API Key](#getting-a-govee-api-key). Controls fail without one.
 
 ## Configuration
 
@@ -59,13 +59,13 @@ retry_attempts = 3         # Retries for transport errors / 5xx (never 429)
 refresh_interval_ms = 30000  # Device-list auto-refresh (minimum 10000)
 ```
 
-The `GOVEE_API_KEY` environment variable takes precedence over the config file - handy for scripts and CI.
+The `GOVEE_API_KEY` environment variable takes precedence over the config file, handy for scripts and CI.
 
 ### Getting a Govee API Key
 
 1. Download the Govee Home app
 2. Go to Settings -> About Us -> Apply for API Key
-3. Follow the instructions to receive your key via email (this can take a little while - it's an application, not an instant token)
+3. Follow the instructions to receive your key via email (this can take a little while; it's an application, not an instant token)
 4. Add the key to your config file, or export it as `GOVEE_API_KEY`
 
 ## Features

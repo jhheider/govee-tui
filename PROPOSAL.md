@@ -1,4 +1,4 @@
-# Govee TUI - Project Proposal
+# Govee TUI: Project Proposal
 
 ## Overview
 A clean, modular Rust TUI application for controlling Govee smart home devices with beautiful colorful UI, efficient architecture, and robust CI/CD.
@@ -88,16 +88,16 @@ client.control_device(device_id, Command {
 ```rust
 // Govee API supports these control commands:
 
-// "turn" - Power control
+// "turn": Power control
 Turn::On | Turn::Off
 
-// "brightness" - Brightness control
+// "brightness": Brightness control
 Brightness(0..=100)  // Percentage (0-100)
 
-// "color" - RGB color control
+// "color": RGB color control
 Color { r: 0..=255, g: 0..=255, b: 0..=255 }
 
-// "colorTem" - Color temperature control
+// "colorTem": Color temperature control
 ColorTemp(2000..=9000)  // Kelvin (warm to cool)
 
 // Fine-grained UI controls:
@@ -164,10 +164,10 @@ Strategy:
 - Efficient caching to minimize build times
 
 Jobs:
-1. Format Check (rustfmt) - ~30s
-2. Lint (clippy --deny warnings) - ~2min
-3. Test (cargo nextest) - ~1min
-4. Build (debug build for validation) - ~2min
+1. Format Check (rustfmt): ~30s
+2. Lint (clippy --deny warnings): ~2min
+3. Test (cargo nextest): ~1min
+4. Build (debug build for validation): ~2min
 
 Optimizations:
 - Swatinem/rust-cache@v2 - Smart incremental caching

@@ -85,7 +85,7 @@ impl App {
                 self.toggle_power();
             }
 
-            // Brightness control - SHIFT for fine adjustment
+            // Brightness control; SHIFT for fine adjustment
             (KeyCode::Up, KeyModifiers::SHIFT) | (KeyCode::Char('K'), _) => {
                 self.adjust_brightness(5);
             }
@@ -99,7 +99,7 @@ impl App {
                 self.adjust_brightness(-10);
             }
 
-            // Color temperature - left is warmer, right is cooler;
+            // Color temperature: left is warmer, right is cooler;
             // SHIFT (or H/L) for fine adjustment
             (KeyCode::Left, KeyModifiers::SHIFT) | (KeyCode::Char('H'), _) => {
                 self.adjust_color_temp(-100);

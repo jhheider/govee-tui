@@ -65,7 +65,7 @@ pub fn render_with_style(
         unknown.clone()
     };
 
-    // Build capabilities list (plain text - VS16 emoji shear some terminals)
+    // Build capabilities list (plain text; VS16 emoji shear some terminals)
     let mut caps = vec![];
     if device.supports_power {
         caps.push("Power");
@@ -101,7 +101,7 @@ pub fn render_with_style(
     .block(Block::default().borders(Borders::ALL).title("Info"));
     frame.render_widget(info, chunks[1]);
 
-    // Brightness - always show if device supports it
+    // Brightness: always show if device supports it
     if device.supports_brightness {
         let (brightness_text, bar_text) = if let Some(s) = state {
             if let Some(brightness) = s.brightness {
@@ -134,7 +134,7 @@ pub fn render_with_style(
         frame.render_widget(brightness_widget, chunks[2]);
     }
 
-    // Color/Temperature - always show if device supports it
+    // Color/Temperature: always show if device supports it
     if device.supports_color || device.supports_color_temp {
         let mut lines = vec![];
 
@@ -163,7 +163,7 @@ pub fn render_with_style(
         frame.render_widget(color_widget, chunks[3]);
     }
 
-    // Controls help - show what's actually available
+    // Controls help: show what's actually available
     let mut help_lines = vec![];
 
     if device.supports_power {

@@ -161,7 +161,7 @@ impl App {
             .cloned();
     }
 
-    /// Send a control immediately (power, color - discrete actions)
+    /// Send a control immediately (power, color, discrete actions)
     pub fn send_control_now(&mut self, command: Command) {
         if let Some(device) = self.selected_device() {
             let device_id = device.id.clone();
@@ -236,9 +236,9 @@ impl App {
                     .map(|s| s.power)
             })
         else {
-            // No known state yet - fetch it rather than guessing
+            // No known state yet, fetch it rather than guessing
             self.request_load_device_state();
-            self.set_status("Power state unknown - loading, press Space again".to_string());
+            self.set_status("Power state unknown; loading, press Space again".to_string());
             return;
         };
         let new_power = !current;
