@@ -36,7 +36,7 @@ wiremock = "0.6"
 
 [package]
 name = "govee-tui"
-version = "0.1.0"
+version = "0.1.1"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -44,6 +44,25 @@ repository.workspace = true
 description = "Clean, colorful TUI for controlling Govee smart devices"
 keywords = ["govee", "tui", "smart-home", "iot"]
 categories = ["command-line-utilities"]
+
+# rust-ci's release.yml ships assets as `govee-tui-{os}-{arch}.{ext}` (no
+# version, no full target triple), which matches none of cargo-binstall's
+# default guess templates, so `cargo binstall govee-tui` silently fell back
+# to compiling from source. archive-suffix resolves against every extension
+# binstall knows for the given pkg-fmt (both .tgz and .tar.gz for Tgz), so
+# this matches the actual .tar.gz assets without hardcoding it.
+#
+# { name } (crate name), not { bin }: binstall only resolves { bin } later,
+# in bin-dir, after a specific binary is known - it isn't available when
+# pkg-url renders (confirmed the hard way on edikt 0.2.7). { name } happens
+# to equal the binary name here.
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ os-name }-{ target-arch }{ archive-suffix }"
+bin-dir = "{ bin }{ binary-ext }"
+pkg-fmt = "tgz"
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-fmt = "zip"
 
 [dependencies]
 govee-api2 = { path = "govee-api2", version = "0.1.0" }
