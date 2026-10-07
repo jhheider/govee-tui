@@ -354,7 +354,9 @@ fn find_device<'a>(devices: &'a [api::Device], query: &str) -> Result<&'a api::D
         .collect();
 
     match matches.len() {
-        0 => bail!("❌ No device found matching '{query}'"),
+        0 => {
+            bail!("❌ No device found matching '{query}'");
+        }
         1 => Ok(matches[0]),
         _ => {
             println!("⚠️  Multiple devices match '{query}':");
