@@ -2,6 +2,7 @@ use crate::error::{Error, Result};
 use crate::types::*;
 use serde::de::DeserializeOwned;
 use serde_json::json;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const API_BASE: &str = "https://openapi.api.govee.com";
@@ -406,12 +407,16 @@ fn header_u64(headers: &reqwest::header::HeaderMap, name: &str) -> Option<u64> {
     headers.get(name)?.to_str().ok()?.trim().parse().ok()
 }
 
+/// Monotonic counter so two IDs generated in the same clock tick still differ.
+static REQUEST_SEQ: AtomicU64 = AtomicU64::new(0);
+
 fn generate_request_id() -> String {
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    format!("rust-{}", timestamp)
+    let seq = REQUEST_SEQ.fetch_add(1, Ordering::Relaxed);
+    format!("rust-{}-{}", timestamp, seq)
 }
 
 #[cfg(test)]
